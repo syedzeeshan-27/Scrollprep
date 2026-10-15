@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ScrollPrep: make any video scroll-smooth</title>
+    <meta
+      name="description"
+      content="Drop a video and get files that scrub smoothly as people scroll your site, plus the code to embed them. Free, open source, runs in your browser."
+    />
+    <meta name="theme-color" content="#09090c" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2309090c'/%3E%3Crect x='6' y='8' width='4' height='16' rx='1.5' fill='%237c5cff'/%3E%3Crect x='14' y='8' width='4' height='16' rx='1.5' fill='%23a78bfa'/%3E%3Crect x='22' y='8' width='4' height='16' rx='1.5' fill='%2322d3ee'/%3E%3C/svg%3E"
+    />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="ScrollPrep home">
+        <span class="brand__mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        ScrollPrep
+      </a>
+      <nav class="topbar__nav">
+        <a href="#how">How it works</a>
+        <span class="pill pill--quiet">Nothing is uploaded</span>
+      </nav>
+    </header>
+
+    <main id="main">
+      <section class="hero">
+        <p class="eyebrow">Free · open source · runs in your browser</p>
+        <h1>Make any video <span class="grad">scroll-smooth</span>.</h1>
+        <p class="lede">
+          Drop in a product video. Get back files that play perfectly as visitors scroll your site, plus the code to
+          paste in. Your video never leaves your computer.
+        </p>
+
+        <div class="drop" id="drop" tabindex="-1">
+          <input id="file" type="file" accept="video/*,.mov,.mkv,.webm,.mp4,.m4v" hidden />
+          <div class="drop__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0-4.5 4.5M12 4l4.5 4.5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+          </div>
+          <p class="drop__title">Drop a video here</p>
+          <p class="drop__hint">MP4, MOV or WebM. Short clips work best.</p>
+          <div class="drop__actions">
+            <button class="btn btn--primary" id="choose" type="button">Choose a video</button>
+            <button class="btn btn--ghost" id="sample" type="button">Try a sample clip</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="workspace" id="workspace" hidden>
+        <div class="card" id="source">
+          <div class="card__head">
+            <h2>Your video</h2>
+            <button class="link" id="reset" type="button">Use a different video</button>
+          </div>
+          <div id="source-body"><p class="muted">Reading video…</p></div>
+        </div>
+
+        <form class="card" id="settings" hidden>
+          <div class="card__head"><h2>Settings</h2></div>
+          <div class="grid">
+            <fieldset>
+              <legend>Size</legend>
+              <div class="seg">
+                <label><input type="radio" name="size" value="1080" checked /><span>1080p</span></label>
+                <label><input type="radio" name="size" value="720" /><span>720p</span></label>
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>Frame rate</legend>
+              <div class="seg">
+                <label><input type="radio" name="fps" value="30" checked /><span>30 fps</span></label>
+                <label><input type="radio" name="fps" value="24" /><span>24 fps</span></label>
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>Quality</legend>
+              <div class="seg">
+                <label><input type="radio" name="quality" value="low" /><span>Low</span></label>
+                <label><input type="radio" name="quality" value="medium" checked /><span>Medium</span></label>
+                <label><input type="radio" name="quality" value="high" /><span>High</span></label>
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>Trim (seconds)</legend>
+              <div class="trim">
+                <label>From <input type="number" name="trimStart" min="0" step="0.1" value="0" inputmode="decimal" /></label>
+                <label>To <input type="number" name="trimEnd" min="0" step="0.1" inputmode="decimal" /></label>
+              </div>
+            </fieldset>
+          </div>
+
+          <fieldset class="outputs">
+            <legend>What to make</legend>
+            <label class="check"><input type="checkbox" name="mp4" checked /><span><b>Main video</b> MP4, plays everywhere</span></label>
+            <label class="check"><input type="checkbox" name="mobile" checked /><span><b>Phone version</b> lighter 720p MP4 for small screens</span></label>
+            <label class="check"><input type="checkbox" name="webm" /><span><b>WebM</b> smaller file for Chrome and Firefox</span></label>
+            <label class="check">
+              <input type="checkbox" name="frames" />
+              <span><b>Image frames</b> a picture sequence, the smoothest option on iPhones</span>
+            </label>
+            <label class="frames-count" hidden>Number of frames <input type="number" name="frameCount" min="2" max="300" step="1" value="120" /></label>
+          </fieldset>
+
+          <div class="estimate" id="estimate" aria-live="polite"></div>
+
+          <div class="actions">
+            <button class="btn btn--primary btn--big" id="go" type="submit">Make it scroll-ready</button>
+          </div>
+        </form>
+
+        <div class="card progress" id="progress" hidden aria-live="polite">
+          <div class="progress__row">
+            <span id="progress-label">Starting…</span>
+            <span id="progress-pct" class="mono">0%</span>
+          </div>
+          <div class="bar"><div class="bar__fill" id="bar"></div></div>
+          <div class="progress__row">
+            <span class="muted" id="progress-step"></span>
+            <button class="link" id="cancel" type="button">Cancel</button>
+          </div>
+        </div>
+
+        <div class="card card--error" id="error" hidden role="alert"></div>
+      </section>
+
+      <section class="results" id="results" hidden>
+        <div class="card card--flush">
+          <div class="preview-bar">
+            <div class="seg" id="preview-mode" role="radiogroup" aria-label="Preview"></div>
+            <label class="length">Effect length
+              <input type="range" id="length" min="1" max="8" step="1" value="3" />
+              <output id="length-out" class="mono">3 screens</output>
+            </label>
+          </div>
+          <iframe id="preview" title="Scroll preview"></iframe>
+          <p class="preview-hint">Scroll inside the box. Switch to <b>Before</b> to feel the difference.</p>
+        </div>
+
+        <div class="card">
+          <div class="card__head">
+            <h2>Your files</h2>
+            <span class="muted" id="elapsed"></span>
+          </div>
+          <ul class="files" id="files"></ul>
+          <div id="notes"></div>
+          <div class="actions">
+            <button class="btn btn--primary btn--big" id="download" type="button">Download zip</button>
+            <button class="btn btn--ghost" id="again" type="button">Change settings</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card__head"><h2>Add it to your site</h2></div>
+          <p class="muted">Copy the <code>scrollprep</code> folder from the zip next to your page, then paste this where the effect should go.</p>
+          <div class="tabs" id="tabs" role="tablist"></div>
+          <div class="code">
+            <button class="btn btn--small copy" id="copy" type="button">Copy</button>
+            <pre><code id="code"></code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="how" id="how">
+        <h2>Why normal videos stutter when you scroll</h2>
+        <p class="lede lede--small">
+          To save space, a video only stores a full picture every few seconds. Every frame in between is just the
+          changes. When scrolling jumps to a random moment, the browser has to rebuild that frame from the last full
+          picture, so it lags and jumps.
+        </p>
+        <div class="strips" aria-hidden="true">
+          <div class="strip"><span class="strip__label">Normal video</span><div class="strip__cells" data-key="15"></div></div>
+          <div class="strip"><span class="strip__label">After ScrollPrep</span><div class="strip__cells" data-key="1"></div></div>
+        </div>
+        <p class="legend"><i class="dot dot--key"></i> full picture <i class="dot"></i> changes only</p>
+        <ol class="steps">
+          <li><b>Drop a video.</b> It stays on your computer. Your browser's own video hardware does the work.</li>
+          <li><b>Preview it.</b> Scroll the live preview and compare it with the original.</li>
+          <li><b>Paste the code.</b> Download the zip, drop the folder on your site and paste two lines.</li>
+        </ol>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <p>ScrollPrep is free and open source under the MIT license. Built with WebCodecs and Mediabunny.</p>
+    </footer>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
