@@ -735,6 +735,63 @@ input[type='number'] {
   border-top: 1px solid var(--line);
 }
 
+/* ---------- effect style ---------- */
+
+.design {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px 40px;
+}
+
+.captions {
+  margin-top: 20px;
+}
+
+.captions ol {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.captions li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+}
+
+input[type='text'] {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line-2);
+  background: #0a0a0e;
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+}
+
+.cap-at {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.cap-at input {
+  width: 64px;
+}
+
+.captions__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
 /* ---------- code ---------- */
 
 .tabs {
@@ -937,6 +994,12 @@ input[type='number'] {
   }
   .card {
     padding: 16px;
+  }
+  .captions li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .captions li .cap-text {
+    grid-column: 1 / -1;
   }
 }
 

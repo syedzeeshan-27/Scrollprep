@@ -193,6 +193,8 @@ export async function runPipeline(
     frames: frames.length ? { count: frames.length, ext: plan.frameExt } : null,
     hasPoster: true,
     scrollLength: s.scrollLength,
+    layout: 'full',
+    captions: [],
   };
   if (frames.length) {
     files.push({

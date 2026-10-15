@@ -13,7 +13,21 @@ import {
   videoBitrate,
   type Settings,
 } from './core/settings';
-import { demoPage, escapeHtml, framesEmbed, hasVideo, PATHS, scriptTag, videoEmbed, type ExportInfo } from './core/snippets';
+import {
+  cleanCaptions,
+  demoPage,
+  escapeHtml,
+  framesEmbed,
+  hasVideo,
+  LAYOUTS,
+  MAX_CAPTIONS,
+  PATHS,
+  scriptTag,
+  videoEmbed,
+  type Caption,
+  type ExportInfo,
+  type Layout,
+} from './core/snippets';
 import { AbortedError, FriendlyError } from './engine/errors';
 import type { PipelineResult, ProbeResult } from './engine';
 
@@ -72,6 +86,9 @@ const el = {
   tabs: $('#tabs'),
   code: $('#code'),
   copy: $<HTMLButtonElement>('#copy'),
+  layout: $('#layout'),
+  captions: $('#captions'),
+  addCaption: $<HTMLButtonElement>('#add-caption'),
 };
 
 // ---------- state ----------
@@ -85,6 +102,12 @@ let controller: AbortController | null = null;
 let zipCache: { length: number; blob: Blob } | null = null;
 let previewMode: 'after' | 'before' | 'frames' = 'after';
 let codeTab = 'embed';
+let layout: Layout = 'full';
+// Example lines so the effect is visible straight away. Easy to edit or remove.
+const captions: Caption[] = [
+  { text: 'Built to last.', at: 0.1 },
+  { text: 'Every detail, considered.', at: 0.55 },
+];
 
 // ---------- settings form ----------
 
@@ -346,8 +369,68 @@ el.cancel.addEventListener('click', () => controller?.abort());
 // ---------- results ----------
 
 function currentInfo(): ExportInfo {
-  return { ...result!.info, scrollLength: Number(el.length.value) || 3 };
+  return { ...result!.info, scrollLength: Number(el.length.value) || 3, layout, captions: cleanCaptions(captions) };
 }
+
+// ---------- effect style: layout and text ----------
+
+el.layout.innerHTML = LAYOUTS.map(
+  (l) => `<label><input type="radio" name="layout" value="${l.id}" ${l.id === layout ? 'checked' : ''}/><span>${l.label}</span></label>`,
+).join('');
+
+el.layout.addEventListener('change', (e) => {
+  layout = (e.target as HTMLInputElement).value as Layout;
+  styleChanged(true);
+});
+
+let styleTimer: ReturnType<typeof setTimeout> | undefined;
+/** Code updates at once. The preview reloads right away for clicks, after a pause for typing. */
+function styleChanged(now: boolean) {
+  zipCache = null;
+  renderCode();
+  clearTimeout(styleTimer);
+  if (now) renderPreview();
+  else styleTimer = setTimeout(renderPreview, 400);
+}
+
+function renderCaptions() {
+  el.captions.innerHTML = captions
+    .map(
+      (c, i) => `<li data-i="${i}">
+        <input type="text" class="cap-text" maxlength="80" value="${escapeHtml(c.text)}" placeholder="Say something about it" aria-label="Text ${i + 1}" />
+        <label class="cap-at">at <input type="number" min="0" max="100" step="5" value="${Math.round(c.at * 100)}" aria-label="When text ${i + 1} appears, in percent" /> %</label>
+        <button type="button" class="link cap-del" aria-label="Remove text ${i + 1}">Remove</button>
+      </li>`,
+    )
+    .join('');
+  el.addCaption.disabled = captions.length >= MAX_CAPTIONS;
+}
+
+el.captions.addEventListener('input', (e) => {
+  const input = e.target as HTMLInputElement;
+  const i = Number(input.closest('li')?.dataset.i);
+  if (!captions[i]) return;
+  if (input.classList.contains('cap-text')) captions[i].text = input.value;
+  else captions[i].at = Math.min(100, Math.max(0, Number(input.value) || 0)) / 100;
+  styleChanged(false);
+});
+
+el.captions.addEventListener('click', (e) => {
+  const btn = (e.target as HTMLElement).closest('.cap-del');
+  if (!btn) return;
+  captions.splice(Number(btn.closest('li')?.dataset.i), 1);
+  renderCaptions();
+  styleChanged(true);
+});
+
+el.addCaption.addEventListener('click', () => {
+  const lastAt = captions.length ? captions[captions.length - 1].at : 0;
+  captions.push({ text: '', at: Math.min(0.9, Math.round((lastAt + 0.25) * 20) / 20) });
+  renderCaptions();
+  el.captions.querySelector<HTMLInputElement>('li:last-child .cap-text')?.focus();
+});
+
+renderCaptions();
 
 function renderPreview() {
   if (!result) return;
@@ -369,6 +452,9 @@ function renderPreview() {
     const desk: ExportInfo = { ...info, videos: { ...info.videos, mobile: info.videos.mobile && !info.videos.mp4 && !info.videos.webm } };
     html = demoPage(desk, { mode: 'video', resolve, runtime: { inline: runtimeSource }, badge: 'After: ScrollPrep' });
   }
+  // Keep the reader's place when the preview reloads after an edit.
+  const y = el.preview.contentWindow?.scrollY ?? 0;
+  el.preview.addEventListener('load', () => el.preview.contentWindow?.scrollTo(0, y), { once: true });
   el.preview.srcdoc = html;
 }
 
@@ -397,7 +483,7 @@ el.length.addEventListener('input', () => {
   zipCache = null;
   renderCode();
 });
-el.length.addEventListener('change', renderPreview);
+el.length.addEventListener('change', () => styleChanged(true));
 
 function renderFiles() {
   if (!result) return;

@@ -9,7 +9,16 @@ import {
   videoBitrate,
 } from '../src/core/settings';
 import { BUDGETS, inputWarnings, rateSize } from '../src/core/budget';
-import { demoPage, escapeHtml, framesEmbed, readme, videoEmbed, type ExportInfo } from '../src/core/snippets';
+import {
+  cleanCaptions,
+  demoPage,
+  escapeHtml,
+  framesEmbed,
+  MAX_CAPTIONS,
+  readme,
+  videoEmbed,
+  type ExportInfo,
+} from '../src/core/snippets';
 import { ffmpegCommands } from '../src/core/ffmpeg';
 
 describe('fitSize', () => {
@@ -99,7 +108,44 @@ const info: ExportInfo = {
   frames: { count: 120, ext: 'webp' },
   hasPoster: true,
   scrollLength: 3,
+  layout: 'full',
+  captions: [],
 };
+
+describe('layouts and captions', () => {
+  it('leaves the layout attribute off for full screen', () => {
+    expect(videoEmbed(info)).not.toContain('data-layout');
+  });
+  it('adds the layout attribute and wraps the media in a frame', () => {
+    const html = videoEmbed({ ...info, layout: 'card' });
+    expect(html).toContain('data-layout="card"');
+    expect(html).toMatch(/scrollscrub__frame">\s*<video/);
+    expect(framesEmbed({ ...info, layout: 'split' })).toContain('data-layout="split"');
+  });
+  it('writes captions sorted, escaped and clamped, skipping empty ones', () => {
+    const html = videoEmbed({
+      ...info,
+      captions: [
+        { text: 'Second <b>', at: 0.6 },
+        { text: '   ', at: 0.3 },
+        { text: 'First', at: -1 },
+        { text: 'Last', at: 7 },
+      ],
+    });
+    expect(html.indexOf('First')).toBeLessThan(html.indexOf('Second'));
+    expect(html).toContain('data-at="0">First');
+    expect(html).toContain('data-at="1">Last');
+    expect(html).toContain('Second &lt;b&gt;');
+    expect(html.match(/scrollscrub__caption"/g)).toHaveLength(3);
+  });
+  it('omits the captions block when there are none', () => {
+    expect(videoEmbed(info)).not.toContain('scrollscrub__captions');
+  });
+  it('caps the number of captions', () => {
+    const many = Array.from({ length: 10 }, (_, i) => ({ text: `c${i}`, at: i / 10 }));
+    expect(cleanCaptions(many)).toHaveLength(MAX_CAPTIONS);
+  });
+});
 
 describe('snippets', () => {
   it('lists webm before mp4 and adds the mobile swap', () => {

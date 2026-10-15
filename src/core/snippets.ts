@@ -11,6 +11,21 @@ export const PATHS = {
 } as const;
 
 export type FrameExt = 'webp' | 'jpg';
+export type Layout = 'full' | 'card' | 'split';
+
+export interface Caption {
+  text: string;
+  /** When it appears, 0 to 1 through the effect. */
+  at: number;
+}
+
+export const LAYOUTS: { id: Layout; label: string }[] = [
+  { id: 'full', label: 'Full screen' },
+  { id: 'card', label: 'Card grows' },
+  { id: 'split', label: 'Split' },
+];
+
+export const MAX_CAPTIONS = 6;
 
 export interface ExportInfo {
   title: string;
@@ -21,6 +36,33 @@ export interface ExportInfo {
   hasPoster: boolean;
   /** Screen heights the effect lasts. */
   scrollLength: number;
+  layout: Layout;
+  captions: Caption[];
+}
+
+/** Drops empty captions, clamps timing to 0..1 and sorts by when they appear. */
+export function cleanCaptions(captions: Caption[]): Caption[] {
+  return captions
+    .map((c) => ({ text: c.text.trim(), at: Math.min(1, Math.max(0, Number.isFinite(c.at) ? c.at : 0)) }))
+    .filter((c) => c.text)
+    .slice(0, MAX_CAPTIONS)
+    .sort((a, b) => a.at - b.at);
+}
+
+function sectionOpen(info: ExportInfo, extraAttrs = ''): string {
+  const layout = info.layout && info.layout !== 'full' ? ` data-layout="${info.layout}"` : '';
+  const ratio = info.width > 0 && info.height > 0 ? `;--scrollscrub-ratio:${Number((info.width / info.height).toFixed(4))}` : '';
+  return `<section class="scrollscrub" data-scrollscrub${layout}${extraAttrs} style="--scrollscrub-length:${info.scrollLength * 100}vh${ratio}">`;
+}
+
+function captionLines(info: ExportInfo): string[] {
+  const caps = cleanCaptions(info.captions ?? []);
+  if (!caps.length) return [];
+  return [
+    `    <div class="scrollscrub__captions">`,
+    ...caps.map((c) => `      <div class="scrollscrub__caption" data-at="${Number(c.at.toFixed(3))}">${escapeHtml(c.text)}</div>`),
+    `    </div>`,
+  ];
 }
 
 export type Resolve = (path: string) => string;
@@ -47,13 +89,16 @@ export function videoEmbed(info: ExportInfo, resolve: Resolve = same): string {
   const poster = info.hasPoster ? ` poster="${attr(resolve(PATHS.poster))}"` : '';
   // With only a mobile file, use it everywhere. Otherwise it is the small-screen swap.
   const mobile = v.mobile && (v.mp4 || v.webm) ? ` data-src-mobile="${attr(resolve(PATHS.mobile))}"` : '';
-  lines.push(`<section class="scrollscrub" data-scrollscrub style="--scrollscrub-length:${info.scrollLength * 100}vh">`);
+  lines.push(sectionOpen(info));
   lines.push(`  <div class="scrollscrub__stage">`);
-  lines.push(`    <video class="scrollscrub__media" muted playsinline preload="auto"${poster}${mobile}>`);
-  if (v.webm) lines.push(`      <source src="${attr(resolve(PATHS.webm))}" type="video/webm">`);
-  if (v.mp4) lines.push(`      <source src="${attr(resolve(PATHS.mp4))}" type="video/mp4">`);
-  if (!v.mp4 && !v.webm && v.mobile) lines.push(`      <source src="${attr(resolve(PATHS.mobile))}" type="video/mp4">`);
-  lines.push(`    </video>`);
+  lines.push(`    <div class="scrollscrub__frame">`);
+  lines.push(`      <video class="scrollscrub__media" muted playsinline preload="auto"${poster}${mobile}>`);
+  if (v.webm) lines.push(`        <source src="${attr(resolve(PATHS.webm))}" type="video/webm">`);
+  if (v.mp4) lines.push(`        <source src="${attr(resolve(PATHS.mp4))}" type="video/mp4">`);
+  if (!v.mp4 && !v.webm && v.mobile) lines.push(`        <source src="${attr(resolve(PATHS.mobile))}" type="video/mp4">`);
+  lines.push(`      </video>`);
+  lines.push(`    </div>`);
+  lines.push(...captionLines(info));
   lines.push(`  </div>`);
   lines.push(`</section>`);
   return lines.join('\n');
@@ -69,9 +114,12 @@ export function framesEmbed(info: ExportInfo, frameUrls?: string[]): string {
     ? `data-frame-list="${attr(JSON.stringify(frameUrls))}"`
     : `data-frames="${attr(framePattern(info.frames.ext))}" data-frame-count="${info.frames.count}" data-frame-pad="4"`;
   return [
-    `<section class="scrollscrub" data-scrollscrub ${source} style="--scrollscrub-length:${info.scrollLength * 100}vh">`,
+    sectionOpen(info, ` ${source}`),
     `  <div class="scrollscrub__stage">`,
-    `    <canvas class="scrollscrub__media" aria-label="${attr(info.title)}"></canvas>`,
+    `    <div class="scrollscrub__frame">`,
+    `      <canvas class="scrollscrub__media" aria-label="${attr(info.title)}"></canvas>`,
+    `    </div>`,
+    ...captionLines(info),
     `  </div>`,
     `</section>`,
   ].join('\n');
@@ -156,6 +204,8 @@ export function readme(info: ExportInfo, ffmpegCommands: string[]): string {
   parts.push('-----');
   parts.push('- Every video frame is a keyframe, so jumping to any point is instant.');
   parts.push('- The style attribute on the section sets how long the effect lasts (300vh = 3 screens).');
+  parts.push('- data-layout="card" grows the video from a card to full screen. data-layout="split" puts text beside it.');
+  parts.push('- Each caption shows from its data-at (0 = start, 1 = end) until the next one. Edit the text freely.');
   parts.push('- Visitors who ask their device for reduced motion see the poster instead.');
   parts.push('- Serve the files from your own site. Videos on other domains need CORS headers.');
   if (ffmpegCommands.length) {

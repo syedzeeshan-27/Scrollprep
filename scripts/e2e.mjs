@@ -7,6 +7,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { unzipSync } from 'fflate';
 import { chromium } from 'playwright-core';
 import { build, preview } from 'vite';
@@ -97,7 +98,40 @@ const base = 'http://localhost:4317/';
 const browser = await chromium.launch({ executablePath, headless: true });
 const context = await browser.newContext({ acceptDownloads: true, viewport: { width: 1280, height: 900 } });
 
-async function convert(label, { load, setup, expectError }) {
+/** Scrolls the preview to a fraction of the effect and reads the player's state. */
+async function previewAt(page, fraction) {
+  const frame = await (await page.$('#preview')).contentFrame();
+  await frame.waitForSelector('[data-scrollscrub]');
+  await frame.evaluate((f) => {
+    const s = document.querySelector('[data-scrollscrub]');
+    window.scrollTo(0, s.offsetTop + (s.offsetHeight - innerHeight) * f);
+  }, fraction);
+  await page.waitForTimeout(800);
+  return frame.evaluate(() => {
+    const s = document.querySelector('[data-scrollscrub]');
+    return {
+      layout: s.dataset.layout ?? 'full',
+      grow: Number(s.style.getPropertyValue('--scrollscrub-grow')),
+      active: [...document.querySelectorAll('.scrollscrub__caption.is-active')].map((c) => c.textContent),
+    };
+  });
+}
+
+async function pickLayout(page, id) {
+  await page.click(`#layout input[value="${id}"]`, { force: true });
+  await page.waitForFunction(
+    (id) => {
+      const doc = document.querySelector('#preview').contentDocument;
+      return doc?.readyState === 'complete' && (doc.querySelector('[data-scrollscrub]')?.dataset.layout ?? 'full') === id;
+    },
+    id,
+    { timeout: 10000 },
+  );
+  // The app restores the preview's scroll position right after it reloads. Let that land first.
+  await page.waitForTimeout(300);
+}
+
+async function convert(label, { load, setup, expectError, inspect }) {
   console.log(`\n== ${label}`);
   const page = await context.newPage();
   const logs = [];
@@ -152,6 +186,7 @@ async function convert(label, { load, setup, expectError }) {
   } else {
     check(false, 'preview iframe present');
   }
+  if (inspect) await inspect(page);
 
   const name = label.replace(/\W+/g, '-').toLowerCase();
   await page.screenshot({ path: join(out, `${name}.png`), fullPage: true });
@@ -189,6 +224,27 @@ const sample = await convert('Sample all outputs', {
     await page.check('input[name=frames]');
     await page.fill('input[name=frameCount]', '60');
   },
+  inspect: async (page) => {
+    // Default example text: the second line (at 55%) shows at 62%, the first (at 10%) at 20%.
+    let st = await previewAt(page, 0.62);
+    check(st.active.length === 1 && st.active[0] === 'Every detail, considered.', `text at 62% is the second line (${st.active})`);
+    st = await previewAt(page, 0.2);
+    check(st.active[0] === 'Built to last.', `text at 20% is the first line (${st.active})`);
+
+    await pickLayout(page, 'card');
+    st = await previewAt(page, 0.1);
+    check(st.grow > 0 && st.grow < 0.5, `card is still small at 10% (grow ${st.grow})`);
+    st = await previewAt(page, 0.6);
+    check(st.grow === 1, `card fills the screen by 60% (grow ${st.grow})`);
+
+    // Edit the text, then pick split: the code and the zip must follow.
+    await page.fill('#captions li:first-child .cap-text', 'Lighter than air');
+    await pickLayout(page, 'split');
+    st = await previewAt(page, 0.2);
+    check(st.layout === 'split' && st.active[0] === 'Lighter than air', `split layout shows the edited text (${st.layout}, ${st.active})`);
+    const code = await page.textContent('#code');
+    check(code.includes('data-layout="split"') && code.includes('Lighter than air'), 'embed code has the layout and the text');
+  },
 });
 if (sample) {
   verifyVideo(sample.dir, 'scrollprep/video.mp4', 1080, 'h264');
@@ -198,6 +254,20 @@ if (sample) {
   const frames = sample.names.filter((n) => n.startsWith('scrollprep/frames/'));
   check(frames.length === 60, `60 frames written (got ${frames.length})`);
   check(sample.names.includes('demo-frames.html'), 'frames demo page written');
+  const demo = readFileSync(join(sample.dir, 'demo.html'), 'utf8');
+  check(demo.includes('data-layout="split"') && demo.includes('Lighter than air'), 'zip demo uses the chosen layout and text');
+
+  // The exported demo, opened straight from disk by someone who has reduced motion switched on.
+  const calm = await browser.newContext({ reducedMotion: 'reduce' });
+  const cp = await calm.newPage();
+  await cp.goto(pathToFileURL(join(sample.dir, 'demo.html')).href);
+  await cp.waitForTimeout(500);
+  const still = await cp.evaluate(() => ({
+    isStatic: document.querySelector('[data-scrollscrub]').classList.contains('scrollscrub--static'),
+    shown: [...document.querySelectorAll('.scrollscrub__caption')].every((c) => getComputedStyle(c).opacity === '1'),
+  }));
+  check(still.isStatic && still.shown, 'reduced motion: still poster with every line of text shown');
+  await calm.close();
 }
 
 // 2. A 4K clip with sound and default settings: must be capped and silent.

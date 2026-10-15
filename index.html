@@ -128,13 +128,35 @@
       </section>
 
       <section class="results" id="results" hidden>
+        <div class="card" id="design">
+          <div class="card__head"><h2>Style the effect</h2></div>
+          <div class="design">
+            <fieldset>
+              <legend>Effect</legend>
+              <div class="seg" id="layout" role="radiogroup" aria-label="Effect"></div>
+            </fieldset>
+            <fieldset>
+              <legend>Length</legend>
+              <label class="length">
+                <input type="range" id="length" min="1" max="8" step="1" value="3" aria-label="Effect length in screens" />
+                <output id="length-out" class="mono">3 screens</output>
+              </label>
+            </fieldset>
+          </div>
+          <fieldset class="captions">
+            <legend>Text over the video</legend>
+            <ol id="captions"></ol>
+            <div class="captions__foot">
+              <button class="btn btn--small" id="add-caption" type="button">Add text</button>
+              <span class="muted small">Each line appears at its point in the scroll and stays until the next one.</span>
+            </div>
+          </fieldset>
+        </div>
+
         <div class="card card--flush">
           <div class="preview-bar">
             <div class="seg" id="preview-mode" role="radiogroup" aria-label="Preview"></div>
-            <label class="length">Effect length
-              <input type="range" id="length" min="1" max="8" step="1" value="3" />
-              <output id="length-out" class="mono">3 screens</output>
-            </label>
+            <span class="muted small">Live preview</span>
           </div>
           <iframe id="preview" title="Scroll preview"></iframe>
           <p class="preview-hint">Scroll inside the box. Switch to <b>Before</b> to feel the difference.</p>

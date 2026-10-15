@@ -56,6 +56,29 @@ Copy the `scrollprep` folder next to your page and paste:
 
 The section's height sets how long the effect lasts. `300vh` means three screens of scrolling.
 
+### Effects and text
+
+Pick an effect in the app, or set it by hand:
+
+- **Full screen** (default): the video fills the screen and scrubs.
+- **Card grows** (`data-layout="card"`): the video starts as a rounded card and grows to fill the
+  screen over the first 40% of the scroll.
+- **Split** (`data-layout="split"`): a text column beside the video on wide screens. Phones fall
+  back to text over the video.
+
+Text over the video appears at chosen points and stays until the next line starts:
+
+```html
+<div class="scrollscrub__captions">
+  <div class="scrollscrub__caption" data-at="0.1">Built to last.</div>
+  <div class="scrollscrub__caption" data-at="0.55">Every detail, considered.</div>
+</div>
+```
+
+The section also gets `--scrollscrub-progress` and `--scrollscrub-grow` CSS variables (0 to 1), so
+you can drive your own styles from the scroll. Visitors who turn on reduced motion get the poster
+with all the text listed underneath.
+
 ## How it works
 
 - **Video engine:** [WebCodecs](https://developer.mozilla.org/docs/Web/API/WebCodecs_API), the
