@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Examples | ScrollPrep</title>
+<meta name="description" content="Four example sites built from free stock clips run through ScrollPrep.">
+<meta name="theme-color" content="#09090c">
+<style>
+  :root { --bg: #09090c; --card: #121218; --line: #23232c; --fg: #ededf2; --muted: #9b9bab; --accent: #a78bfa; }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); color: var(--fg); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body { margin: 0; padding: 0 16px 60px; }
+  a { color: inherit; }
+  header { max-width: 1100px; margin: 0 auto; padding: 22px 0; display: flex; justify-content: space-between; align-items: center; }
+  header a { text-decoration: none; font-weight: 600; }
+  header .try { font-size: 14px; padding: 8px 16px; border-radius: 99px; background: #7c5cff; color: #fff; }
+  .intro { max-width: 1100px; margin: 6vh auto 5vh; }
+  h1 { font-size: clamp(32px, 5vw, 56px); letter-spacing: -.03em; margin: 0 0 12px; }
+  .intro p { color: var(--muted); font-size: 18px; max-width: 36em; margin: 0; line-height: 1.6; }
+  .grid { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 22px; }
+  .ex { display: block; text-decoration: none; background: var(--card); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; transition: border-color .2s, transform .2s; }
+  .ex:hover { border-color: #3a3a48; transform: translateY(-2px); }
+  .ex img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: #000; }
+  .ex div { padding: 18px 20px 22px; }
+  .ex b { display: block; font-size: 18px; margin-bottom: 4px; }
+  .ex span { color: var(--muted); font-size: 14px; line-height: 1.5; }
+  .ex em { display: inline-block; font-style: normal; font-size: 12px; color: var(--accent); border: 1px solid rgba(167,139,250,.35); border-radius: 99px; padding: 2px 10px; margin-bottom: 10px; }
+  .credit { max-width: 1100px; margin: 40px auto 0; color: #6b6b7a; font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <a href="/">ScrollPrep</a>
+  <a class="try" href="/">Try it with your video</a>
+</header>
+<section class="intro">
+  <h1>Examples</h1>
+  <p>Each site below uses a free stock clip that went through ScrollPrep with almost no changes to the settings. Open one and scroll.</p>
+</section>
+<main class="grid">
+  <a class="ex" href="camera/index.html"><img src="camera/scrollprep/poster.jpg" alt="An action camera on a turntable" loading="lazy"><div><em>Full screen</em><b>Kestrel One</b><span>A product spins all the way round as you scroll, with text at each step.</span></div></a>
+  <a class="ex" href="coffee/index.html"><img src="coffee/scrollprep/poster.jpg" alt="Coffee being poured into a mug" loading="lazy"><div><em>Split</em><b>Ember &amp; Oak</b><span>Coffee pours beside a column of text that fills in line by line.</span></div></a>
+  <a class="ex" href="coast/index.html"><img src="coast/scrollprep/poster.jpg" alt="Drone shot over sea cliffs" loading="lazy"><div><em>Card grows · phone crop</em><b>Saltline</b><span>A drone shot grows from a card to full screen. Phones get a tall crop.</span></div></a>
+  <a class="ex" href="retreat/index.html"><img src="retreat/background/poster.jpg" alt="Misty pine forest in the mountains" loading="lazy"><div><em>Background loop</em><b>Hollow Pines</b><span>A header video shrunk from 13 MB to 2.4 MB that loops without a visible jump.</span></div></a>
+</main>
+<p class="credit">Footage from Pexels by Pho Tomass, Joshua Woroniecki, Luz Calor Som and Alex Moliski. The brands are made up.</p>
+</body>
+</html>

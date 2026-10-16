@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Saltline | ScrollPrep example</title>
+<meta name="description" content="Example travel page: a drone shot grows from a card to full screen as you scroll. Made with ScrollPrep.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #eef2f1; --fg: #0e2a2d; --muted: #5d7476; --accent: #1f7a72; }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); color: var(--fg); font-family: Inter, system-ui, sans-serif; }
+  body { margin: 0; }
+  a { color: inherit; text-decoration: none; }
+  .serif { font-family: Fraunces, Georgia, serif; }
+  .nav { display: flex; align-items: center; justify-content: space-between; padding: 22px 5vw; font-size: 14px; }
+  .nav .logo { font-size: 22px; font-weight: 600; }
+  .nav nav { display: flex; gap: 28px; color: var(--muted); }
+  .nav .book { padding: 9px 18px; border-radius: 99px; background: var(--fg); color: var(--bg); font-weight: 600; font-size: 13px; }
+  @media (max-width: 700px) { .nav nav { display: none; } }
+
+  .hero { text-align: center; padding: 14vh 6vw 6vh; }
+  .hero .tag { display: inline-block; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent);
+               border: 1px solid rgba(31,122,114,.35); border-radius: 99px; padding: 6px 14px; margin: 0 0 26px; }
+  .hero h1 { margin: 0 auto; font-weight: 400; font-size: clamp(46px, 7.5vw, 112px); line-height: .98; letter-spacing: -.03em; max-width: 11em; }
+  .hero p { color: var(--muted); font-size: 18px; max-width: 30em; margin: 24px auto 0; line-height: 1.6; }
+
+  /* Card grows: the video starts as a rounded card and fills the screen. */
+  .trail { --scrollscrub-length: 380vh; }
+  .trail .scrollscrub__caption:not(.is-active) { transition-duration: .15s; }
+  .trail .scrollscrub__captions { opacity: var(--scrollscrub-grow, 0); }
+  .trail .scrollscrub__caption { font-family: Fraunces, Georgia, serif; font-weight: 400; letter-spacing: -.02em; }
+  .trail .scrollscrub__caption small { display: block; font-family: Inter, system-ui, sans-serif; font-size: 16px; font-weight: 500;
+    letter-spacing: 0; opacity: .85; margin-top: 12px; }
+
+  .stops { padding: 14vh 5vw; display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 28px; max-width: 1200px; margin: 0 auto; }
+  .stop { background: #fff; border-radius: 20px; padding: 30px; box-shadow: 0 1px 0 rgba(14,42,45,.06); }
+  .stop b { display: block; color: var(--accent); font-size: 13px; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 10px; }
+  .stop h3 { font-size: 26px; font-weight: 400; margin: 0 0 8px; }
+  .stop p { color: var(--muted); margin: 0; line-height: 1.6; }
+  .foot { text-align: center; padding: 6vh 6vw 10vh; color: var(--muted); font-size: 14px; }
+  .foot a { text-decoration: underline; }
+</style>
+</head>
+<body>
+<header class="nav">
+  <a class="logo serif" href="#">Saltline</a>
+  <nav><a href="#">Routes</a><a href="#">Stays</a><a href="#">Journal</a></nav>
+  <a class="book" href="#">Plan a trip</a>
+</header>
+
+<section class="hero">
+  <p class="tag">Coastal walking holidays</p>
+  <h1 class="serif">The coast, the long way round.</h1>
+  <p>Seven days on foot along cliffs, coves and empty beaches. We carry the bags. You keep walking.</p>
+</section>
+
+<section class="scrollscrub trail" data-scrollscrub data-layout="card" style="--scrollscrub-length:380vh;--scrollscrub-ratio:1.7778">
+  <div class="scrollscrub__stage">
+    <div class="scrollscrub__frame">
+      <video class="scrollscrub__media" muted playsinline preload="auto" poster="scrollprep/poster.jpg"
+             data-src-mobile="scrollprep/video-mobile.mp4" data-poster-mobile="scrollprep/poster-mobile.jpg">
+        <source src="scrollprep/video.mp4" type="video/mp4">
+      </video>
+    </div>
+    <div class="scrollscrub__captions">
+      <div class="scrollscrub__caption" data-at="0.42">Day one starts here.<small>A cliff path above the Atlantic.</small></div>
+      <div class="scrollscrub__caption" data-at="0.72">112 km of this.<small>Wild, quiet and all yours.</small></div>
+    </div>
+  </div>
+</section>
+
+<section class="stops">
+  <div class="stop"><b>Day 1–2</b><h3 class="serif">Headlands</h3><p>Big views and easy miles to warm up the legs.</p></div>
+  <div class="stop"><b>Day 3–5</b><h3 class="serif">The coves</h3><p>Steep steps down to sheltered beaches and fish suppers.</p></div>
+  <div class="stop"><b>Day 6–7</b><h3 class="serif">Lighthouse end</h3><p>The last stretch to the point, then a long lunch.</p></div>
+</section>
+<p class="foot">Saltline is a made-up company for this demo. Scroll video made with <a href="/">ScrollPrep</a>. Footage by Luz Calor Som on Pexels.</p>
+<script src="scrollprep/scrollscrub.js" defer></script>
+</body>
+</html>

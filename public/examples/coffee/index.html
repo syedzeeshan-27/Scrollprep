@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ember &amp; Oak | ScrollPrep example</title>
+<meta name="description" content="Example cafe page: coffee pours as you scroll, with text beside it. Made with ScrollPrep.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #f4ede3; --fg: #2a1d15; --muted: #8a7566; --accent: #b4441f; }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); color: var(--fg); font-family: Inter, system-ui, sans-serif; }
+  body { margin: 0; }
+  a { color: inherit; text-decoration: none; }
+  .serif { font-family: "Instrument Serif", Georgia, serif; font-weight: 400; }
+  .nav { display: flex; align-items: center; justify-content: space-between; padding: 24px 6vw; font-size: 14px; }
+  .nav .logo { font-size: 26px; letter-spacing: -.01em; }
+  .nav nav { display: flex; gap: 30px; color: var(--muted); }
+  .nav .order { border-bottom: 1px solid currentColor; padding-bottom: 2px; }
+  @media (max-width: 700px) { .nav nav { display: none; } }
+
+  .hero { display: grid; grid-template-columns: 1.2fr 1fr; gap: 6vw; align-items: end; padding: 12vh 6vw 10vh; }
+  .hero h1 { margin: 0; font-size: clamp(56px, 9vw, 140px); line-height: .9; letter-spacing: -.02em; }
+  .hero h1 em { color: var(--accent); }
+  .hero p { color: var(--muted); font-size: 18px; line-height: 1.6; margin: 0 0 12px; max-width: 24em; }
+  .tag { font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin: 0 0 22px; }
+  @media (max-width: 800px) { .hero { grid-template-columns: 1fr; } }
+
+  /* Split layout: the text column fills in line by line as the coffee pours. */
+  .pour .scrollscrub__caption { font-family: "Instrument Serif", Georgia, serif; font-weight: 400; letter-spacing: -.01em; }
+  .pour .scrollscrub__caption small { display: block; font-family: Inter, system-ui, sans-serif; font-size: 15px; line-height: 1.6;
+    letter-spacing: 0; color: var(--muted); margin-top: 8px; max-width: 26em; }
+  @media (min-width: 768px) {
+    .pour .scrollscrub__caption { font-size: clamp(26px, 3vw, 46px); line-height: 1.05; opacity: .18; }
+    .pour .scrollscrub__caption.is-active { opacity: 1; }
+    .pour .scrollscrub__frame { box-shadow: 0 40px 80px -30px rgba(60, 30, 10, .45); }
+  }
+
+  .menu { padding: 14vh 6vw; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 40px; border-top: 1px solid rgba(42,29,21,.12); }
+  .menu h3 { font-size: 34px; margin: 0 0 8px; }
+  .menu p { color: var(--muted); margin: 0; line-height: 1.6; }
+  .menu .price { color: var(--accent); font-weight: 600; margin-top: 10px; }
+  .foot { padding: 12vh 6vw; text-align: center; background: var(--fg); color: var(--bg); }
+  .foot h2 { font-size: clamp(40px, 6vw, 84px); margin: 0 0 10px; }
+  .foot p { color: #bba999; margin: 0; }
+  .made { font-size: 13px; color: #8f7d6e; margin-top: 50px !important; }
+  .made a { text-decoration: underline; }
+</style>
+</head>
+<body>
+<header class="nav">
+  <a class="logo serif" href="#">Ember &amp; Oak</a>
+  <nav><a href="#">Beans</a><a href="#">Brew guides</a><a href="#">Visit</a></nav>
+  <a class="order" href="#">Order online</a>
+</header>
+
+<section class="hero">
+  <div>
+    <p class="tag">Small-batch roasters</p>
+    <h1 class="serif">Slow coffee for <em>busy</em> mornings.</h1>
+  </div>
+  <p>Roasted on Mondays, brewed by hand and poured the way it should be. Scroll down and pour yourself one.</p>
+</section>
+
+<section class="scrollscrub pour" data-scrollscrub data-layout="split" style="--scrollscrub-length:320vh;--scrollscrub-ratio:1.8944">
+  <div class="scrollscrub__stage">
+    <div class="scrollscrub__frame">
+      <video class="scrollscrub__media" muted playsinline preload="auto" poster="scrollprep/poster.jpg">
+        <source src="scrollprep/video.mp4" type="video/mp4">
+      </video>
+    </div>
+    <div class="scrollscrub__captions">
+      <div class="scrollscrub__caption" data-at="0">Ground fresh.<small>Beans are ground seconds before they meet the water.</small></div>
+      <div class="scrollscrub__caption" data-at="0.3">Poured slowly.<small>A steady stream at 94°C, never boiling.</small></div>
+      <div class="scrollscrub__caption" data-at="0.62">Rich to the brim.<small>Dark chocolate, cherry and a little smoke.</small></div>
+    </div>
+  </div>
+</section>
+
+<section class="menu">
+  <div><h3 class="serif">House Blend</h3><p>Brazil and Ethiopia. Sweet, round, easy to love.</p><p class="price">£11 · 250 g</p></div>
+  <div><h3 class="serif">Night Owl</h3><p>Our darkest roast. Cocoa, molasses, no bitterness.</p><p class="price">£12 · 250 g</p></div>
+  <div><h3 class="serif">Single Origin</h3><p>A new farm every month, picked by our roaster.</p><p class="price">£14 · 250 g</p></div>
+</section>
+
+<footer class="foot">
+  <h2 class="serif">See you tomorrow.</h2>
+  <p>Ember &amp; Oak is a made-up cafe for this demo.</p>
+  <p class="made">Scroll video made with <a href="/">ScrollPrep</a>. Footage by Joshua Woroniecki on Pexels.</p>
+</footer>
+<script src="scrollprep/scrollscrub.js" defer></script>
+</body>
+</html>

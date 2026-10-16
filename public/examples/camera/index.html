@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kestrel One | ScrollPrep example</title>
+<meta name="description" content="Example product page: a camera turns as you scroll. Made with ScrollPrep.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #050506; --fg: #f2f2f4; --muted: #8b8b96; --accent: #ff5a36; }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); color: var(--fg); font-family: Inter, system-ui, sans-serif; }
+  body { margin: 0; }
+  a { color: inherit; text-decoration: none; }
+  .nav { position: fixed; inset: 0 0 auto; z-index: 10; display: flex; align-items: center; justify-content: space-between;
+         padding: 18px 5vw; backdrop-filter: blur(12px); background: rgba(5,5,6,.55); border-bottom: 1px solid rgba(255,255,255,.06); }
+  .nav b { font-weight: 700; letter-spacing: .02em; }
+  .nav nav { display: flex; gap: 28px; font-size: 14px; color: var(--muted); }
+  .nav .buy { font-size: 13px; font-weight: 600; padding: 8px 16px; border-radius: 99px; background: var(--fg); color: #000; }
+  @media (max-width: 700px) { .nav nav { display: none; } }
+
+  .hero { min-height: 92vh; display: grid; place-content: center; text-align: center; padding: 120px 6vw 40px; }
+  .eyebrow { color: var(--accent); font-weight: 600; font-size: 14px; letter-spacing: .12em; text-transform: uppercase; margin: 0 0 18px; }
+  .hero h1 { margin: 0; font-size: clamp(44px, 8.5vw, 120px); line-height: .95; letter-spacing: -.045em; font-weight: 700; }
+  .hero p.lede { color: var(--muted); font-size: clamp(17px, 1.6vw, 21px); margin: 26px auto 0; max-width: 30em; }
+  .hint { margin-top: 56px; font-size: 13px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+  .hint::after { content: ""; display: block; width: 1px; height: 48px; margin: 14px auto 0; background: linear-gradient(var(--muted), transparent); }
+
+  /* The square video sits in the middle and fades into the black page. */
+  .spin .scrollscrub__frame { background: var(--bg); }
+  .spin .scrollscrub__media { object-fit: contain; }
+  .spin .scrollscrub__frame::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(circle closest-side, rgba(5,5,6,0) 62%, var(--bg) 100%); }
+  .spin .scrollscrub__captions { background: none; height: 100%; }
+  .spin .scrollscrub__caption:not(.is-active) { transition-duration: .15s; }
+  .spin .scrollscrub__caption { left: 6vw; bottom: auto; top: 50%; margin-top: -1em; max-width: 9em;
+    font-size: clamp(28px, 4vw, 58px); letter-spacing: -.035em; text-shadow: none; }
+  .spin .scrollscrub__caption small { display: block; font-size: 16px; font-weight: 500; letter-spacing: 0; color: var(--muted); margin-top: 14px; max-width: 18em; }
+  @media (max-width: 767px) { .spin .scrollscrub__caption { top: auto; bottom: 9vh; margin: 0; } }
+
+  .specs { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1px; background: rgba(255,255,255,.08);
+           max-width: 1100px; margin: 0 auto; border-radius: 22px; overflow: hidden; }
+  .specs div { background: #0c0c0e; padding: 34px 28px; }
+  .specs b { display: block; font-size: 40px; letter-spacing: -.03em; }
+  .specs span { color: var(--muted); font-size: 14px; }
+  .outro { padding: 18vh 6vw 14vh; text-align: center; }
+  .outro h2 { font-size: clamp(32px, 5vw, 64px); letter-spacing: -.04em; margin: 0 0 14px; }
+  .outro p { color: var(--muted); margin: 0 0 30px; }
+  .cta { display: inline-block; padding: 14px 26px; border-radius: 99px; background: var(--accent); color: #fff; font-weight: 600; }
+  .made { text-align: center; color: #55555f; font-size: 13px; padding: 0 0 40px; }
+  .made a { text-decoration: underline; }
+  section.pad { padding: 10vh 5vw; }
+</style>
+</head>
+<body>
+<header class="nav">
+  <b>KESTREL</b>
+  <nav><a href="#">Overview</a><a href="#">Tech specs</a><a href="#">Accessories</a></nav>
+  <a class="buy" href="#">Pre-order</a>
+</header>
+
+<section class="hero">
+  <p class="eyebrow">Kestrel One</p>
+  <h1>Every angle.<br>One pocket.</h1>
+  <p class="lede">A tiny action camera with two screens and a lens that sees almost everything.</p>
+  <div class="hint">Scroll to turn it</div>
+</section>
+
+<section class="scrollscrub spin" data-scrollscrub style="--scrollscrub-length:420vh;--scrollscrub-ratio:1">
+  <div class="scrollscrub__stage">
+    <div class="scrollscrub__frame">
+      <video class="scrollscrub__media" muted playsinline preload="auto" poster="scrollprep/poster.jpg"
+             data-src-mobile="scrollprep/video-mobile.mp4" data-poster-mobile="scrollprep/poster-mobile.jpg">
+        <source src="scrollprep/video.mp4" type="video/mp4">
+      </video>
+    </div>
+    <div class="scrollscrub__captions">
+      <div class="scrollscrub__caption" data-at="0.04">Small enough to forget.<small>Under 150 grams with the battery in.</small></div>
+      <div class="scrollscrub__caption" data-at="0.32">Two screens.<small>Frame the shot from the front or the back.</small></div>
+      <div class="scrollscrub__caption" data-at="0.58">155° of view.<small>Wide enough for the whole trail.</small></div>
+      <div class="scrollscrub__caption" data-at="0.82">Ready in a second.<small>Flip it on and it's already recording.</small></div>
+    </div>
+  </div>
+</section>
+
+<section class="pad">
+  <div class="specs">
+    <div><b>4K</b><span>at 120 frames a second</span></div>
+    <div><b>155°</b><span>ultra-wide lens</span></div>
+    <div><b>18 m</b><span>waterproof, no case</span></div>
+    <div><b>2.5 h</b><span>of recording</span></div>
+  </div>
+</section>
+
+<section class="outro">
+  <h2>Take it everywhere.</h2>
+  <p>Kestrel is a made-up brand for this demo.</p>
+  <a class="cta" href="#">Pre-order now</a>
+</section>
+<p class="made">Scroll video made with <a href="/">ScrollPrep</a>. Footage by Pho Tomass on Pexels.</p>
+<script src="scrollprep/scrollscrub.js" defer></script>
+</body>
+</html>

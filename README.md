@@ -1,36 +1,105 @@
-# ScrollPrep
+<h1 align="center">ScrollPrep</h1>
 
-**Make any video scroll-smooth.** Drop in a video and get back files that scrub perfectly as
-visitors scroll your site, plus the code to paste in. It runs entirely in your browser, so your
-video is never uploaded anywhere.
+<p align="center">
+  <b>Make any video scroll-smooth.</b><br>
+  Drop in a video, get back files that play perfectly as people scroll your site, plus the code to paste in.<br>
+  Free, open source, and it runs in your browser, so your video is never uploaded anywhere.
+</p>
 
-## The problem
+<p align="center">
+  <b>Live demo:</b> coming soon &nbsp;·&nbsp;
+  <a href="#examples">Examples</a> &nbsp;·&nbsp;
+  <a href="#use-it-on-your-site">Use it on your site</a> &nbsp;·&nbsp;
+  <a href="#how-it-works">How it works</a>
+</p>
+
+<p align="center">
+  <img src="docs/media/app.gif" width="760" alt="Dropping a video into ScrollPrep, converting it and scrolling the live preview">
+</p>
+
+## Why this exists
 
 Apple-style product pages play a video forward and backward as you scroll. Try that with a normal
-video and it stutters. To save space, videos only store a full picture (a *keyframe*) every few
-seconds. Every frame in between holds only the changes. When scrolling jumps to a random moment,
-the browser has to rebuild that frame from the last keyframe, so it lags.
+video and it stutters, because videos only store a full picture (a *keyframe*) every few seconds.
+Everything in between is just the changes, so when the scroll jumps to a random moment the browser
+has to rebuild that frame from the last keyframe. It lags.
 
-The fix is to re-save the video with every frame as a keyframe, at a sensible size, without
-audio, in a format Safari accepts. Until now that meant typing ffmpeg commands like this:
+The fix is to re-save the video so every frame is a keyframe, at a sensible size, without sound, in a
+format Safari accepts. That used to mean ffmpeg commands like this one:
 
 ```bash
 ffmpeg -i in.mov -vf "scale=1920:1080,fps=30" -c:v libx264 -crf 20 -g 1 -pix_fmt yuv420p -movflags +faststart -an video.mp4
 ```
 
-ScrollPrep does it with a drag and drop, shows you a live before/after preview, and warns you
-when the files are too heavy for phones.
+ScrollPrep does it with a drag and drop. It shows you a live preview, lets you add text and effects,
+crops a separate version for phones, warns you when the files are too heavy, and hands you a zip with
+the files and a tiny player.
+
+## Examples
+
+Four free clips from [Pexels](https://www.pexels.com), each run through ScrollPrep and dropped into a
+small made-up website. The GIFs are recordings of those real pages being scrolled. The page source is
+in [`public/examples`](public/examples).
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/media/camera.gif" alt="A camera spins as the page scrolls">
+      <p><b>Product spin</b> · Full screen effect<br>
+      A camera on a turntable turns as you scroll, with a line of text at each step.
+      The 9 second clip had 3 keyframes. Now all 226 frames are keyframes, in 3.9 MB.</p>
+      <sub><a href="public/examples/camera/index.html">Page source</a></sub>
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/media/coffee.gif" alt="Coffee pours beside a column of text">
+      <p><b>Coffee pour</b> · Split effect<br>
+      The video sits beside a column of text that lights up line by line as the coffee pours.
+      Trimmed to 8 seconds at 720p: 3.0 MB.</p>
+      <sub><a href="public/examples/coffee/index.html">Page source</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/media/coast.gif" alt="A drone shot grows from a card to full screen">
+      <p><b>Coastal reveal</b> · Card grows effect<br>
+      A drone shot starts as a rounded card and grows to fill the screen before the text comes in.
+      A 35 MB, 35 second clip became a 7 second, 5.7 MB section.</p>
+      <sub><a href="public/examples/coast/index.html">Page source</a></sub>
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/media/retreat.gif" alt="A misty mountain video loops behind a page header">
+      <p><b>Background loop</b> · Header video<br>
+      Not a scroll effect: a light video that autoplays behind a header. 13 MB went down to 2.4 MB,
+      and the end blends into the start so you can't see where it restarts.</p>
+      <sub><a href="public/examples/retreat/index.html">Page source</a></sub>
+    </td>
+  </tr>
+</table>
+
+### On phones
+
+<img align="right" src="docs/media/coast-phone.gif" width="240" alt="The coastal example on a phone, using a tall crop">
+
+A wide video on a tall phone screen either looks tiny or loses its sides. For wide videos ScrollPrep
+also makes a phone version cropped to 9:16 (or 4:5). You click the part of the video that should stay
+in frame, check it in the Phone preview, and the player swaps it in on small screens along with a
+matching poster.
+
+The recording on the right is the same coastal page on a 390 px wide screen. The phone file is
+606×1080 and 1.8 MB.
+
+<br clear="right">
 
 ## What you get
 
 | File | What it is |
 |---|---|
 | `scrollprep/video.mp4` | H.264, every frame a keyframe, no audio, up to 1080p. Plays everywhere. |
-| `scrollprep/video-mobile.mp4` | Lighter 720p copy, picked automatically on small screens. |
+| `scrollprep/video-mobile.mp4` | Lighter phone copy, cropped tall for wide videos, picked automatically on small screens. |
 | `scrollprep/video.webm` | Optional VP9 copy, smaller, for Chrome and Firefox. |
 | `scrollprep/frames/*.webp` | Optional image sequence for a canvas player. The smoothest option on iPhones. |
 | `scrollprep/poster.jpg` | First frame, shown while loading and to visitors who prefer reduced motion. |
-| `scrollprep/scrollscrub.js` | A tiny, dependency-free player (about 7 KB). |
+| `scrollprep/scrollscrub.js` | A small, dependency-free player (12 KB, about 4 KB gzipped). |
 | `demo.html` | A working page you can open straight away. |
 | `README.txt` | Embed code and the equivalent ffmpeg commands. |
 
@@ -38,17 +107,19 @@ The video files work with any scroll-scrub player, such as
 [scrolly-video](https://github.com/dkaoster/scrolly-video), GSAP ScrollTrigger, or the bundled
 `scrollscrub.js`.
 
-## Embedding
+## Use it on your site
 
 Copy the `scrollprep` folder next to your page and paste:
 
 ```html
 <section class="scrollscrub" data-scrollscrub style="--scrollscrub-length:300vh">
   <div class="scrollscrub__stage">
-    <video class="scrollscrub__media" muted playsinline preload="auto"
-           poster="scrollprep/poster.jpg" data-src-mobile="scrollprep/video-mobile.mp4">
-      <source src="scrollprep/video.mp4" type="video/mp4">
-    </video>
+    <div class="scrollscrub__frame">
+      <video class="scrollscrub__media" muted playsinline preload="auto"
+             poster="scrollprep/poster.jpg" data-src-mobile="scrollprep/video-mobile.mp4">
+        <source src="scrollprep/video.mp4" type="video/mp4">
+      </video>
+    </div>
   </div>
 </section>
 <script src="scrollprep/scrollscrub.js" defer></script>
@@ -66,45 +137,40 @@ Pick an effect in the app, or set it by hand:
 - **Split** (`data-layout="split"`): a text column beside the video on wide screens. Phones fall
   back to text over the video.
 
-Text over the video appears at chosen points and stays until the next line starts. In the app you
-place it on a timeline of stills from your video: drag a label (or use the arrow keys, Shift for
-bigger steps) and the preview jumps to where it appears. By hand it looks like this:
+Text appears at chosen points and stays until the next line starts. In the app you place it on a
+timeline of stills from your video: drag a label (or use the arrow keys, Shift for bigger steps) and
+the preview jumps to where it appears. By hand it looks like this:
 
 ```html
 <div class="scrollscrub__captions">
-  <div class="scrollscrub__caption" data-at="0.1">Built to last.</div>
-  <div class="scrollscrub__caption" data-at="0.55">Every detail, considered.</div>
+  <div class="scrollscrub__caption" data-at="0.1">Small enough to forget.</div>
+  <div class="scrollscrub__caption" data-at="0.55">Ready in a second.</div>
 </div>
 ```
 
 The section also gets `--scrollscrub-progress` and `--scrollscrub-grow` CSS variables (0 to 1), so
-you can drive your own styles from the scroll. Visitors who turn on reduced motion get the poster
-with all the text listed underneath.
+you can drive your own styles from the scroll. Visitors who turn on reduced motion get the poster with
+all the text listed underneath.
 
-## Phone framing
-
-A wide video on a tall phone screen either looks tiny or loses its sides. For wide videos the phone
-version is a tall crop (9:16 or 4:5). Click the part of the video that should stay in frame, and
-check the result in the Phone preview. A matching phone poster is swapped in on small screens.
-
-## Background loops
+### Background loops
 
 Pick **Background loop** instead of Scroll effect to shrink a video for autoplay behind a page
 header. It keeps normal keyframes (every 2 seconds), strips the sound, caps the size and can
-crossfade the end into the start so you can't see where it restarts. The 4K test clip goes from
-22 MB to under 1 MB. You get an MP4, an optional WebM, a poster, the HTML and CSS, and a small
-script that shows the still poster to visitors who prefer reduced motion.
+crossfade the end into the start so the restart is invisible. You get an MP4, an optional WebM, a
+poster, the HTML and CSS, and a small script that shows the still poster to visitors who prefer
+reduced motion.
 
 ## How it works
 
 - **Video engine:** [WebCodecs](https://developer.mozilla.org/docs/Web/API/WebCodecs_API), the
   browser's built-in and usually hardware-accelerated encoder, through
-  [Mediabunny](https://mediabunny.dev). No 30 MB ffmpeg download and no special server headers,
-  so the site stays a small static page.
-- **Preview:** the preview is the exact demo page from the zip, rendered in an iframe with the
-  files swapped for in-memory URLs. What you see is what you ship.
-- **Browser support:** current Chrome, Edge and Safari, and desktop Firefox. If a browser can't
-  read or encode a file, ScrollPrep says so and shows the ffmpeg commands to run instead.
+  [Mediabunny](https://mediabunny.dev). No 30 MB ffmpeg download and no special server headers, so
+  the site stays a small static page.
+- **Preview:** the preview is the exact demo page from the zip, rendered in an iframe with the files
+  swapped for in-memory URLs. What you see is what you ship.
+- **Browser support:** current Chrome, Edge and Safari, and desktop Firefox. If a browser can't read
+  or encode a file, ScrollPrep says so and shows the ffmpeg commands to run instead. So far it has
+  been tested most in Chrome.
 
 ## Development
 
@@ -122,21 +188,47 @@ npm run e2e
 ```
 
 The end-to-end run builds the app, drives headless Chrome through real conversions (a sample, a 4K
-clip with sound, a trimmed portrait clip and a broken file), downloads each zip and checks with
-ffprobe that every frame is a keyframe, sizes are capped and audio is gone. It needs Chrome or Edge
-plus ffmpeg and ffprobe on your PATH.
+clip with sound, a trimmed portrait clip, background loops and a broken file), downloads each zip and
+checks with ffprobe that every frame is a keyframe, sizes are capped and audio is gone. It needs
+Chrome or Edge plus ffmpeg and ffprobe on your PATH.
+
+The examples and GIFs are made by two scripts, so they can be rebuilt after a change:
+
+```bash
+node scripts/showcase.mjs
+```
+
+```bash
+node scripts/record.mjs
+```
+
+The first downloads the Pexels clips and runs each one through the app. The second scrolls each
+example page in headless Chrome, takes a screenshot per step and turns them into the GIFs in
+`docs/media`.
 
 Code layout:
 
-- `src/core`: pure logic (sizes, bitrates, size budgets, snippet and ffmpeg generation), unit tested
-- `src/engine`: media work in the browser (probe, encode, frames, pipeline, zip)
+- `src/core`: pure logic (sizes, bitrates, size budgets, crops, snippet and ffmpeg generation), unit tested
+- `src/engine`: media work in the browser (probe, encode, frames, loops, pipeline, zip)
 - `src/runtime/scrollscrub.js`: the player that ships in every zip
-- `src/main.ts`, `src/styles.css`, `index.html`: the interface
+- `src/main.ts`, `src/ui`, `src/styles.css`, `index.html`: the interface
+- `public/examples`: the example sites
 
 ## Deploying
 
 It is a static site. On Vercel, import the repo and keep the defaults (framework: Vite, output:
 `dist`). Any static host works the same way.
+
+## Credits
+
+Example footage from Pexels, free to use under the [Pexels license](https://www.pexels.com/license/):
+
+- Camera: [Pho Tomass](https://www.pexels.com/@pho-tomass-883344227)
+- Coffee: [Joshua Woroniecki](https://www.pexels.com/@joshuaworoniecki)
+- Coast: [Luz Calor Som](https://www.pexels.com/@luz-calor-som-99374650)
+- Mountains: [Alex Moliski](https://www.pexels.com/@alexmoliski)
+
+The brands in the examples (Kestrel, Ember & Oak, Saltline, Hollow Pines) are made up.
 
 ## License
 
