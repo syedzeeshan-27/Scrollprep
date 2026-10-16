@@ -14,3 +14,4 @@ In-browser tool that turns a video into scroll-scrub-ready files. Plan: `docs/pl
 - 2026-10-16: Rendering the sample with ffmpeg's mandelbrot source at 720p and maxiter=1500 ran over 5 minutes without finishing. Time a 1-second test render before a full one.
 - 2026-10-16: The mandelbrot sample at low maxiter rendered as a flat green screen. Always look at a few stills from a generated clip before using it.
 - 2026-10-16: README GIFs showed ghost text while scrolling because ffmpeg's `hqdn3d=4:4:0:0` treats a 0 temporal strength as "use the default", so it still blended frames. Use `hqdn3d=4:4:0.01:0.01` (or no denoise) and look at frames from the finished GIF, not just the raw shots.
+- 2026-10-16: Scripts that clear `.showcase/*` failed with EBUSY three times because the shell's working directory was left inside that folder (Windows locks it). Never `cd` into generated output folders; read them with absolute paths.

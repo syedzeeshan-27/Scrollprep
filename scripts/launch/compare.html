@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Compare</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #09090c; color: #ededf2; font-family: Inter, system-ui, sans-serif; }
+  h1 { position: absolute; top: 46px; left: 0; right: 0; margin: 0; text-align: center; font-size: 64px; letter-spacing: -.035em; font-weight: 800; }
+  h1 span { background: linear-gradient(90deg, #a78bfa, #22d3ee); -webkit-background-clip: text; color: transparent; }
+  .row { position: absolute; top: 170px; left: 0; right: 0; display: flex; justify-content: center; gap: 64px; }
+  .panel { width: 760px; }
+  .panel video { display: block; width: 760px; height: 760px; object-fit: cover; border-radius: 28px; background: #000; }
+  .label { display: flex; align-items: center; gap: 14px; margin-top: 22px; font-size: 30px; font-weight: 700; letter-spacing: -.01em; }
+  .label i { width: 14px; height: 14px; border-radius: 50%; }
+  .label small { font-size: 22px; font-weight: 500; color: #9b9bab; margin-left: auto; }
+  .bad i { background: #f87171; } .good i { background: #a78bfa; }
+  .panel.good video { box-shadow: 0 0 0 3px rgba(167,139,250,.55); }
+  /* A scroll bar on the right edge so it's clear both are driven by the same scroll. */
+  .scroll { position: absolute; right: 52px; top: 170px; width: 10px; height: 760px; border-radius: 99px; background: #23232c; }
+  .scroll b { position: absolute; left: 0; right: 0; height: 120px; border-radius: 99px; background: #ededf2; }
+  .scroll span { position: absolute; top: 776px; left: 50%; transform: translateX(-50%); font-size: 16px; color: #9b9bab; letter-spacing: .1em; text-transform: uppercase; }
+</style>
+</head>
+<body>
+<h1>Same video. Same scroll. <span>One stutters.</span></h1>
+<div class="row">
+  <div class="panel bad">
+    <video id="a" src="original.mp4" muted playsinline preload="auto"></video>
+    <div class="label"><i></i>Normal video<small>full picture every 3 s</small></div>
+  </div>
+  <div class="panel good">
+    <video id="b" src="scrollprep.mp4" muted playsinline preload="auto"></video>
+    <div class="label"><i></i>After ScrollPrep<small>every frame a full picture</small></div>
+  </div>
+</div>
+<div class="scroll"><b id="thumb"></b><span>scroll</span></div>
+<script>
+  // Both videos follow the same scroll position with the same simple player logic:
+  // jump to the matching time whenever the previous jump has finished.
+  const vids = [document.getElementById('a'), document.getElementById('b')];
+  const thumb = document.getElementById('thumb');
+  const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
+  // [seconds, scroll position] waypoints of a person scrolling down, back up a bit, then down again.
+  const path = [[0, 0], [0.4, 0], [3.4, 1], [3.8, 1], [5.4, 0.25], [6.8, 0.85], [7.4, 0.85]];
+  function at(t) {
+    for (let i = 1; i < path.length; i++) {
+      const [t0, p0] = path[i - 1], [t1, p1] = path[i];
+      if (t <= t1) return p0 + (p1 - p0) * ease((t - t0) / (t1 - t0));
+    }
+    return path[path.length - 1][1];
+  }
+  window.ready = Promise.all(vids.map((v) => new Promise((r) => (v.readyState >= 2 ? r() : v.addEventListener('loadeddata', r, { once: true })))));
+  window.start = () => new Promise((done) => {
+    const t0 = performance.now();
+    const end = 7.4;
+    function frame(now) {
+      const t = (now - t0) / 1000;
+      const p = at(t);
+      thumb.style.top = `${p * (760 - 120)}px`;
+      const target = p * 9.3;
+      for (const v of vids) if (!v.seeking && Math.abs(v.currentTime - target) > 0.02) v.currentTime = target;
+      if (t < end) requestAnimationFrame(frame); else done();
+    }
+    requestAnimationFrame(frame);
+  });
+</script>
+</body>
+</html>
