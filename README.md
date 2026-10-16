@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <b>Live demo:</b> coming soon &nbsp;·&nbsp;
+  <a href="https://scrollprep.vercel.app"><b>Try it live</b></a> &nbsp;·&nbsp;
   <a href="#examples">Examples</a> &nbsp;·&nbsp;
   <a href="#use-it-on-your-site">Use it on your site</a> &nbsp;·&nbsp;
   <a href="#how-it-works">How it works</a>
@@ -16,6 +16,8 @@
 <p align="center">
   <img src="docs/media/app.gif" width="760" alt="Dropping a video into ScrollPrep, converting it and scrolling the live preview">
 </p>
+
+<p align="center"><a href="https://scrollprep.vercel.app"><b>→ scrollprep.vercel.app</b></a></p>
 
 ## Why this exists
 
@@ -38,7 +40,8 @@ the files and a tiny player.
 ## Examples
 
 Four free clips from [Pexels](https://www.pexels.com), each run through ScrollPrep and dropped into a
-small made-up website. The GIFs are recordings of those real pages being scrolled. The page source is
+small made-up website. The GIFs are recordings of those real pages being scrolled. You can
+scroll them yourself on the [live examples page](https://scrollprep.vercel.app/examples/). The page source is
 in [`public/examples`](public/examples).
 
 <table>
@@ -48,14 +51,14 @@ in [`public/examples`](public/examples).
       <p><b>Product spin</b> · Full screen effect<br>
       A camera on a turntable turns as you scroll, with a line of text at each step.
       The 9 second clip had 3 keyframes. Now all 226 frames are keyframes, in 3.9 MB.</p>
-      <sub><a href="public/examples/camera/index.html">Page source</a></sub>
+      <sub><a href="https://scrollprep.vercel.app/examples/camera/">Open it live</a> · <a href="public/examples/camera/index.html">Page source</a></sub>
     </td>
     <td width="50%" valign="top">
       <img src="docs/media/coffee.gif" alt="Coffee pours beside a column of text">
       <p><b>Coffee pour</b> · Split effect<br>
       The video sits beside a column of text that lights up line by line as the coffee pours.
       Trimmed to 8 seconds at 720p: 3.0 MB.</p>
-      <sub><a href="public/examples/coffee/index.html">Page source</a></sub>
+      <sub><a href="https://scrollprep.vercel.app/examples/coffee/">Open it live</a> · <a href="public/examples/coffee/index.html">Page source</a></sub>
     </td>
   </tr>
   <tr>
@@ -64,14 +67,14 @@ in [`public/examples`](public/examples).
       <p><b>Coastal reveal</b> · Card grows effect<br>
       A drone shot starts as a rounded card and grows to fill the screen before the text comes in.
       A 35 MB, 35 second clip became a 7 second, 5.7 MB section.</p>
-      <sub><a href="public/examples/coast/index.html">Page source</a></sub>
+      <sub><a href="https://scrollprep.vercel.app/examples/coast/">Open it live</a> · <a href="public/examples/coast/index.html">Page source</a></sub>
     </td>
     <td width="50%" valign="top">
       <img src="docs/media/retreat.gif" alt="A misty mountain video loops behind a page header">
       <p><b>Background loop</b> · Header video<br>
       Not a scroll effect: a light video that autoplays behind a header. 13 MB went down to 2.4 MB,
       and the end blends into the start so you can't see where it restarts.</p>
-      <sub><a href="public/examples/retreat/index.html">Page source</a></sub>
+      <sub><a href="https://scrollprep.vercel.app/examples/retreat/">Open it live</a> · <a href="public/examples/retreat/index.html">Page source</a></sub>
     </td>
   </tr>
 </table>
