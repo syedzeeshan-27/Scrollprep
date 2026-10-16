@@ -258,6 +258,9 @@
       var player = null;
       if (isStatic) el.classList.add('scrollscrub--static');
       if (media.tagName === 'VIDEO') {
+        // Phone framing: a poster cut for small screens, if the export has one.
+        var phonePoster = media.getAttribute('data-poster-mobile');
+        if (phonePoster && window.matchMedia && window.matchMedia(MOBILE_QUERY).matches) media.poster = phonePoster;
         if (isStatic) {
           // Reduced motion: show the poster as a still image and skip the scroll effect.
           media.preload = 'none';

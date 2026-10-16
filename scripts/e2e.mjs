@@ -284,8 +284,10 @@ const sample = await convert('Sample all outputs', {
 });
 if (sample) {
   verifyVideo(sample.dir, 'scrollprep/video.mp4', 1080, 'h264');
-  // The sample is 540p, below the phone size, so no separate phone file is expected.
-  check(!sample.names.includes('scrollprep/video-mobile.mp4'), 'no pointless phone copy for a small source');
+  // The sample is wide, so phones get a tall 9:16 crop of it (540 high, 302 wide).
+  const ph = verifyVideo(sample.dir, 'scrollprep/video-mobile.mp4', 720, 'h264');
+  check(ph && ph.width === 302 && ph.height === 540, `phone copy is a tall crop, 302x540 (got ${ph?.width}x${ph?.height})`);
+  check(sample.names.includes('scrollprep/poster-mobile.jpg'), 'phone poster written');
   verifyVideo(sample.dir, 'scrollprep/video.webm', 1080, 'vp9');
   const frames = sample.names.filter((n) => n.startsWith('scrollprep/frames/'));
   check(frames.length === 60, `60 frames written (got ${frames.length})`);
@@ -306,13 +308,34 @@ if (sample) {
   await calm.close();
 }
 
-// 2. A 4K clip with sound and default settings: must be capped and silent.
-const big = await convert('4K with audio', { load: setInput(fourK) });
+// 2. A 4K clip with sound and default settings: must be capped and silent. The phone crop's focus
+//    is clicked near the right edge, so the crop must sit at the far right of the frame.
+const big = await convert('4K with audio', {
+  load: setInput(fourK),
+  setup: async (page) => {
+    // locator.click scrolls the picker into view first (a raw mouse click would land off screen).
+    const picker = page.locator('#focus');
+    const box = await picker.boundingBox();
+    await picker.click({ position: { x: box.width * 0.97, y: box.height / 2 } });
+  },
+  inspect: async (page) => {
+    await page.click('#preview-mode input[value="phone"]', { force: true });
+    await page.waitForTimeout(1500);
+    const phone = await (await page.$('#preview')).contentFrame().then((f) =>
+      f.evaluate(() => ({ w: innerWidth, src: document.querySelector('video').currentSrc })),
+    );
+    check(phone.w <= 400 && phone.src.startsWith('blob:'), `phone preview is phone-width and plays a video (width ${phone.w})`);
+  },
+});
 if (big) {
   const v = verifyVideo(big.dir, 'scrollprep/video.mp4', 1080, 'h264');
   check(v && v.width === 1920 && v.height === 1080, '4K scaled to exactly 1920x1080');
   const m = verifyVideo(big.dir, 'scrollprep/video-mobile.mp4', 720, 'h264');
-  check(m && m.width === 1280 && m.height === 720, 'phone copy is 1280x720');
+  check(m && m.width === 720 && m.height === 1280, `phone copy is a tall 720x1280 crop (got ${m?.width}x${m?.height})`);
+  const readme = readFileSync(join(big.dir, 'README.txt'), 'utf8');
+  check(readme.includes('crop=1214:2160:2626:0'), 'phone crop sits at the right edge where the focus was clicked');
+  const demo = readFileSync(join(big.dir, 'demo.html'), 'utf8');
+  check(demo.includes('data-poster-mobile="scrollprep/poster-mobile.jpg"'), 'demo swaps in the phone poster');
 }
 
 // 3. Portrait MOV at 720p, trimmed, 24 fps.

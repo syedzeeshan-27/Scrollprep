@@ -574,6 +574,75 @@ input[type='number'] {
   padding: 4px 14px 0;
 }
 
+/* phone framing */
+
+.phone-framing {
+  display: grid;
+  gap: 12px;
+  padding: 4px 14px 8px 42px;
+}
+
+.phone-framing__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+
+.focus-wrap p {
+  margin: 6px 0 0;
+}
+
+.focus {
+  position: relative;
+  width: min(100%, 420px);
+  overflow: hidden;
+  border-radius: 10px;
+  background: #000;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.focus video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+}
+
+.focus__box {
+  position: absolute;
+  border: 2px solid var(--accent-2);
+  border-radius: 6px;
+  /* Darken everything outside the phone crop. */
+  box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+  transition:
+    left 0.08s,
+    top 0.08s;
+}
+
+.focus__dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  background: var(--accent-2);
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.5);
+}
+
+#preview.is-phone {
+  width: min(390px, 100%);
+  height: min(72vh, 760px);
+  margin: 16px auto;
+  border-radius: 28px;
+  box-shadow: 0 0 0 8px #1b1b22, 0 0 0 9px var(--line-2);
+}
+
 .estimate {
   margin-top: 20px;
 }

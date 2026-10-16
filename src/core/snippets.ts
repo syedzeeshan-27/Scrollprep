@@ -6,6 +6,7 @@ export const PATHS = {
   mobile: 'scrollprep/video-mobile.mp4',
   webm: 'scrollprep/video.webm',
   poster: 'scrollprep/poster.jpg',
+  posterMobile: 'scrollprep/poster-mobile.jpg',
   runtime: 'scrollprep/scrollscrub.js',
   frames: 'scrollprep/frames/',
 } as const;
@@ -34,6 +35,8 @@ export interface ExportInfo {
   videos: { mp4: boolean; mobile: boolean; webm: boolean };
   frames: { count: number; ext: FrameExt } | null;
   hasPoster: boolean;
+  /** A poster cut to the phone framing, swapped in on small screens. */
+  hasMobilePoster?: boolean;
   /** Screen heights the effect lasts. */
   scrollLength: number;
   layout: Layout;
@@ -88,7 +91,10 @@ export function videoEmbed(info: ExportInfo, resolve: Resolve = same): string {
   const lines: string[] = [];
   const poster = info.hasPoster ? ` poster="${attr(resolve(PATHS.poster))}"` : '';
   // With only a mobile file, use it everywhere. Otherwise it is the small-screen swap.
-  const mobile = v.mobile && (v.mp4 || v.webm) ? ` data-src-mobile="${attr(resolve(PATHS.mobile))}"` : '';
+  const swap = v.mobile && (v.mp4 || v.webm);
+  const mobile =
+    (swap ? ` data-src-mobile="${attr(resolve(PATHS.mobile))}"` : '') +
+    (info.hasMobilePoster ? ` data-poster-mobile="${attr(resolve(PATHS.posterMobile))}"` : '');
   lines.push(sectionOpen(info));
   lines.push(`  <div class="scrollscrub__stage">`);
   lines.push(`    <div class="scrollscrub__frame">`);

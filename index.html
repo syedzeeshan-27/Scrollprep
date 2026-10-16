@@ -97,6 +97,19 @@
             <legend>What to make</legend>
             <label class="check"><input type="checkbox" name="mp4" checked /><span><b>Main video</b> MP4, plays everywhere</span></label>
             <label class="check"><input type="checkbox" name="mobile" checked /><span><b>Phone version</b> lighter 720p MP4 for small screens</span></label>
+            <div class="phone-framing" id="phone-framing" hidden>
+              <div class="phone-framing__row">
+                <span class="muted small">Phone framing</span>
+                <div class="seg" id="framing" role="radiogroup" aria-label="Phone framing"></div>
+              </div>
+              <div class="focus-wrap" id="focus-wrap" hidden>
+                <div class="focus" id="focus" title="Click what should stay in frame on phones">
+                  <video muted playsinline preload="auto" aria-hidden="true"></video>
+                  <div class="focus__box"><i class="focus__dot"></i></div>
+                </div>
+                <p class="muted small">Click or drag on the video to choose what stays in frame on phones.</p>
+              </div>
+            </div>
             <label class="check"><input type="checkbox" name="webm" /><span><b>WebM</b> smaller file for Chrome and Firefox</span></label>
             <label class="check">
               <input type="checkbox" name="frames" />

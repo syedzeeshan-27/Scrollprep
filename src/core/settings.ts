@@ -1,5 +1,7 @@
 /** Pure settings maths. No browser APIs here, so it is easy to unit test. */
 
+import type { Focus, PhoneFraming } from './crop';
+
 export type Resolution = 720 | 1080;
 export type QualityLevel = 'low' | 'medium' | 'high';
 export type VideoCodecChoice = 'avc' | 'vp9';
@@ -27,6 +29,10 @@ export interface Settings {
   frameCount: number;
   /** How many screen heights the scroll effect lasts. */
   scrollLength: number;
+  /** How the phone version is framed when the video is wider than a phone. */
+  phoneFraming: PhoneFraming;
+  /** What the phone crop centres on. */
+  focus: Focus;
 }
 
 export interface Size {
@@ -67,6 +73,8 @@ export function defaultSettings(): Settings {
     outputs: { mp4: true, mobile: true, webm: false, frames: false },
     frameCount: 120,
     scrollLength: 3,
+    phoneFraming: 'tall',
+    focus: { x: 0.5, y: 0.5 },
   };
 }
 

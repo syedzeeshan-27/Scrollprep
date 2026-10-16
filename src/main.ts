@@ -30,6 +30,7 @@ import {
 } from './core/snippets';
 import { AbortedError, FriendlyError } from './engine/errors';
 import { Timeline } from './ui/timeline';
+import { FRAMINGS, needsCrop, phoneCrop, type Focus } from './core/crop';
 import type { PipelineResult, ProbeResult } from './engine';
 
 // The engine pulls in the video library (about 500 KB), so load it only when needed. Start
@@ -91,6 +92,10 @@ const el = {
   captions: $('#captions'),
   addCaption: $<HTMLButtonElement>('#add-caption'),
   timeline: $('#timeline'),
+  phoneFraming: $('#phone-framing'),
+  framing: $('#framing'),
+  focusWrap: $('#focus-wrap'),
+  focus: $('#focus'),
 };
 
 // ---------- state ----------
@@ -103,9 +108,11 @@ let frameUrls: string[] = [];
 let thumbUrls: string[] = [];
 let controller: AbortController | null = null;
 let zipCache: { length: number; blob: Blob } | null = null;
-let previewMode: 'after' | 'before' | 'frames' = 'after';
+let previewMode: 'after' | 'phone' | 'before' | 'frames' = 'after';
 let codeTab = 'embed';
 let layout: Layout = 'full';
+/** What the phone crop centres on, picked by clicking the video. */
+let focus: Focus = { x: 0.5, y: 0.5 };
 // Example lines so the effect is visible straight away. Easy to edit or remove.
 const captions: Caption[] = [
   { text: 'Built to last.', at: 0.1 },
@@ -129,6 +136,9 @@ function readSettings(): Settings {
   s.outputs = { mp4: f.has('mp4'), mobile: f.has('mobile'), webm: f.has('webm'), frames: f.has('frames') };
   s.frameCount = Math.min(MAX_FRAME_COUNT, Math.max(2, Math.round(num('frameCount') ?? 120)));
   s.scrollLength = Number(el.length.value) || 3;
+  const framing = String(f.get('framing') ?? 'tall');
+  s.phoneFraming = framing === 'portrait' || framing === 'same' ? framing : 'tall';
+  s.focus = { ...focus };
   return s;
 }
 
@@ -148,9 +158,11 @@ function renderEstimate() {
     rows.push(`<li><span>${label}</span><span class="mono">≈ ${formatBytes(bytes)}</span>${pill(rateSize(bytes, target))}</li>`);
   if (s.outputs.mp4) row(`Main video, ${main.width}×${main.height}`, estimateBytes(videoBitrate(main, s.fps, s.quality, 'avc'), secs), 'desktop');
   if (s.outputs.mobile) {
-    const m = fitSize(source, MOBILE_SHORT_SIDE);
-    if (m.width < main.width || !s.outputs.mp4) {
-      row(`Phone video, ${m.width}×${m.height}`, estimateBytes(videoBitrate(m, s.fps, s.quality, 'avc'), secs), 'mobile');
+    const crop = phoneCrop(source, s.phoneFraming, s.focus);
+    const m = fitSize(crop ?? source, MOBILE_SHORT_SIDE);
+    if (crop || m.width < main.width || !s.outputs.mp4) {
+      const shape = crop ? ', cropped for phones' : '';
+      row(`Phone video, ${m.width}×${m.height}${shape}`, estimateBytes(videoBitrate(m, s.fps, s.quality, 'avc'), secs), 'mobile');
     } else {
       rows.push(`<li><span class="muted">No separate phone video needed. This one is already phone-sized.</span></li>`);
     }
@@ -163,7 +175,56 @@ function renderEstimate() {
   el.go.disabled = !rows.length || !source.canDecode;
   const fc = el.settings.querySelector<HTMLElement>('.frames-count');
   if (fc) show(fc, s.outputs.frames);
+  renderFraming(s);
 }
+
+// ---------- phone framing ----------
+
+el.framing.innerHTML = FRAMINGS.map(
+  (f) => `<label><input type="radio" name="framing" value="${f.id}" ${f.id === 'tall' ? 'checked' : ''}/><span>${f.label}</span></label>`,
+).join('');
+
+const focusVideo = el.focus.querySelector('video')!;
+const focusBox = el.focus.querySelector<HTMLElement>('.focus__box')!;
+
+/** Shows the framing options for wide videos, and the crop box over the picker. */
+function renderFraming(s: Settings) {
+  if (!source) return;
+  const wide = needsCrop(source, 'tall');
+  show(el.phoneFraming, s.outputs.mobile && wide);
+  const crop = s.outputs.mobile ? phoneCrop(source, s.phoneFraming, s.focus) : null;
+  show(el.focusWrap, !!crop);
+  if (!crop) return;
+  el.focus.style.aspectRatio = `${source.width} / ${source.height}`;
+  focusBox.style.left = `${(crop.left / source.width) * 100}%`;
+  focusBox.style.top = `${(crop.top / source.height) * 100}%`;
+  focusBox.style.width = `${(crop.width / source.width) * 100}%`;
+  focusBox.style.height = `${(crop.height / source.height) * 100}%`;
+}
+
+function setFocusFrom(e: PointerEvent) {
+  const r = el.focus.getBoundingClientRect();
+  focus = {
+    x: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)),
+    y: Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)),
+  };
+  renderFraming(readSettings());
+}
+
+let pickingFocus = false;
+el.focus.addEventListener('pointerdown', (e) => {
+  pickingFocus = true;
+  el.focus.setPointerCapture(e.pointerId);
+  setFocusFrom(e);
+});
+el.focus.addEventListener('pointermove', (e) => pickingFocus && setFocusFrom(e));
+el.focus.addEventListener('pointerup', () => (pickingFocus = false));
+el.focus.addEventListener('pointercancel', () => (pickingFocus = false));
+
+// Show a frame from the middle of the clip in the picker.
+focusVideo.addEventListener('loadedmetadata', () => {
+  if (Number.isFinite(focusVideo.duration)) focusVideo.currentTime = focusVideo.duration / 2;
+});
 
 el.settings.addEventListener('input', renderEstimate);
 el.settings.addEventListener('change', renderEstimate);
@@ -186,6 +247,7 @@ function resetAll() {
   if (sourceUrl) URL.revokeObjectURL(sourceUrl);
   source = null;
   sourceUrl = null;
+  focusVideo.removeAttribute('src');
   result = null;
   el.preview.srcdoc = '';
   show(el.workspace, false);
@@ -228,6 +290,8 @@ async function loadFile(file: File) {
     const p = await probe(file);
     source = p;
     sourceUrl = URL.createObjectURL(file);
+    focus = { x: 0.5, y: 0.5 };
+    focusVideo.src = sourceUrl;
     const warn = inputWarnings({ duration: p.duration, width: p.width, height: p.height, bytes: file.size });
     el.sourceBody.innerHTML = `
       <div class="source">
@@ -547,11 +611,19 @@ function renderPreview(seekTo?: number) {
     });
   } else if (previewMode === 'frames') {
     html = demoPage(info, { mode: 'frames', frameUrls, runtime: { inline: runtimeSource }, badge: 'After: image frames' });
+  } else if (previewMode === 'phone') {
+    // A phone-width frame, so the player picks the phone video and poster by itself.
+    html = demoPage(info, { mode: 'video', resolve, runtime: { inline: runtimeSource }, badge: 'Phone' });
   } else {
     // The preview shows the desktop version, so leave out the phone swap.
-    const desk: ExportInfo = { ...info, videos: { ...info.videos, mobile: info.videos.mobile && !info.videos.mp4 && !info.videos.webm } };
+    const desk: ExportInfo = {
+      ...info,
+      hasMobilePoster: false,
+      videos: { ...info.videos, mobile: info.videos.mobile && !info.videos.mp4 && !info.videos.webm },
+    };
     html = demoPage(desk, { mode: 'video', resolve, runtime: { inline: runtimeSource }, badge: 'After: ScrollPrep' });
   }
+  el.preview.classList.toggle('is-phone', previewMode === 'phone');
   // A reload that is still pending keeps the place it already remembered.
   afterLoad = { y: afterLoad?.y ?? el.preview.contentWindow?.scrollY ?? 0, seekTo };
   el.preview.srcdoc = html;
@@ -561,6 +633,7 @@ function renderModes() {
   if (!result) return;
   const modes: [typeof previewMode, string][] = [];
   if (hasVideo(result.info)) modes.push(['after', 'After']);
+  if (result.info.videos.mobile) modes.push(['phone', 'Phone']);
   if (result.info.frames) modes.push(['frames', 'Frames']);
   modes.push(['before', 'Before']);
   el.previewMode.innerHTML = modes

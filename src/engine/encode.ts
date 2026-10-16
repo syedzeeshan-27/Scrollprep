@@ -10,6 +10,7 @@ import {
   Quality,
   WebMOutputFormat,
 } from 'mediabunny';
+import type { CropRect } from '../core/crop';
 import type { Range, Size, VideoCodecChoice } from '../core/settings';
 import { AbortedError, FriendlyError } from './errors';
 
@@ -19,6 +20,8 @@ export interface EncodeOptions {
   fps: number;
   bitrate: number;
   range: Range;
+  /** Region of the source to keep, in source pixels, applied before resizing. */
+  crop?: CropRect;
 }
 
 export type Progress = (fraction: number) => void;
@@ -51,6 +54,7 @@ export async function encodeVideo(file: Blob, o: EncodeOptions, onProgress: Prog
         width: o.size.width,
         height: o.size.height,
         fit: 'fill',
+        crop: o.crop,
         frameRate: o.fps,
         codec: o.codec,
         // Constant mode: hardware encoders ignore the target in variable mode when every frame is a keyframe.

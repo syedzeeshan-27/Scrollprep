@@ -1,5 +1,6 @@
 /** Equivalent ffmpeg commands, for the readme and for browsers that can't do the job themselves. */
 
+import type { CropRect } from './crop';
 import type { Range, Size } from './settings';
 
 export interface CommandInput {
@@ -8,6 +9,8 @@ export interface CommandInput {
   fps: number;
   main?: Size;
   mobile?: Size;
+  /** Phone crop in source pixels, applied before scaling. */
+  mobileCrop?: CropRect;
   webm?: Size;
   frames?: { size: Size; count: number; ext: 'webp' | 'jpg' };
 }
@@ -25,7 +28,11 @@ export function ffmpegCommands(c: CommandInput): string[] {
   const h264 = '-c:v libx264 -preset slow -crf 20 -g 1 -pix_fmt yuv420p -movflags +faststart -an';
   const out: string[] = [];
   if (c.main) out.push(`${head} ${vf(c.main, c.fps)} ${h264} scrollprep/video.mp4`);
-  if (c.mobile) out.push(`${head} ${vf(c.mobile, c.fps)} ${h264} scrollprep/video-mobile.mp4`);
+  if (c.mobile) {
+    const k = c.mobileCrop;
+    const crop = k ? `crop=${k.width}:${k.height}:${k.left}:${k.top},` : '';
+    out.push(`${head} -vf "${crop}scale=${c.mobile.width}:${c.mobile.height},fps=${c.fps}" ${h264} scrollprep/video-mobile.mp4`);
+  }
   if (c.webm) {
     out.push(
       `${head} ${vf(c.webm, c.fps)} -c:v libvpx-vp9 -crf 32 -b:v 0 -g 1 -row-mt 1 -pix_fmt yuv420p -an scrollprep/video.webm`,

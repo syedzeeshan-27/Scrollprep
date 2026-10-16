@@ -1,4 +1,5 @@
 import { ALL_FORMATS, BlobSource, CanvasSink, Input } from 'mediabunny';
+import type { CropRect } from '../core/crop';
 import { frameTimestamps, type Size } from '../core/settings';
 import type { FrameExt } from '../core/snippets';
 import type { Progress } from './encode';
@@ -86,15 +87,24 @@ export async function thumbnails(file: Blob, count: number, height: number): Pro
   }
 }
 
-/** A JPEG of the first frame, used before the video loads and for reduced-motion visitors. */
-export async function poster(file: Blob, size: Size, time: number): Promise<Blob> {
+/**
+ * A JPEG of the first frame, used before the video loads and for reduced-motion visitors. With
+ * `crop`, only that region of the source (in source pixels) is kept, as for the phone poster.
+ */
+export async function poster(file: Blob, size: Size, time: number, crop?: CropRect): Promise<Blob> {
   const { input, track } = await openTrack(file);
   try {
-    const sink = new CanvasSink(track, { width: size.width, height: size.height, fit: 'fill' });
+    // For a crop, read the frame at full size first, then cut the region out of it.
+    const sink = new CanvasSink(track, crop ? {} : { width: size.width, height: size.height, fit: 'fill' });
     const first = await track.getFirstTimestamp();
     const wrapped = (await sink.getCanvas(Math.max(time, first))) ?? (await sink.getCanvas(first));
     if (!wrapped) throw new FriendlyError('Could not read the first frame.');
-    return await toBlob(wrapped.canvas, 'image/jpeg', 0.82);
+    if (!crop) return await toBlob(wrapped.canvas, 'image/jpeg', 0.82);
+    const out = document.createElement('canvas');
+    out.width = size.width;
+    out.height = size.height;
+    out.getContext('2d')!.drawImage(wrapped.canvas, crop.left, crop.top, crop.width, crop.height, 0, 0, size.width, size.height);
+    return await toBlob(out, 'image/jpeg', 0.82);
   } finally {
     input.dispose();
   }

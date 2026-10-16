@@ -186,6 +186,24 @@ describe('snippets', () => {
   });
 });
 
+describe('phone framing output', () => {
+  it('adds the phone poster swap only when there is a phone poster', () => {
+    expect(videoEmbed(info)).not.toContain('data-poster-mobile');
+    expect(videoEmbed({ ...info, hasMobilePoster: true })).toContain('data-poster-mobile="scrollprep/poster-mobile.jpg"');
+  });
+  it('crops before scaling in the ffmpeg phone command', () => {
+    const [cmd] = ffmpegCommands({
+      inputName: 'a.mp4',
+      range: { start: 0, end: 2 },
+      fps: 30,
+      mobile: { width: 606, height: 1080 },
+      mobileCrop: { left: 656, top: 0, width: 606, height: 1080 },
+    });
+    expect(cmd).toContain('-vf "crop=606:1080:656:0,scale=606:1080,fps=30"');
+    expect(cmd).toContain('video-mobile.mp4');
+  });
+});
+
 describe('ffmpeg commands', () => {
   it('makes every frame a keyframe and strips audio', () => {
     const cmds = ffmpegCommands({

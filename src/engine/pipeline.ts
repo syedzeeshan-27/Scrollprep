@@ -15,6 +15,7 @@ import { PATHS, type ExportInfo, type FrameExt } from '../core/snippets';
 import { canEncode, encodeVideo, type Progress } from './encode';
 import { AbortedError, FriendlyError } from './errors';
 import { extractFrames, imageExt, poster } from './frames';
+import { phoneCrop, type CropRect } from '../core/crop';
 import type { ProbeResult } from './probe';
 
 export interface OutputFile {
@@ -56,6 +57,8 @@ export interface Plan {
   range: Range;
   main: Size;
   mobile: Size | null;
+  /** The phone crop in source pixels, or null to keep the desktop framing. */
+  mobileCrop: CropRect | null;
   frameExt: FrameExt;
   commands: CommandInput;
 }
@@ -65,14 +68,19 @@ export function planFor(p: ProbeResult, s: Settings): Plan {
   const src = { width: p.width, height: p.height };
   const range = clipRange(p.duration, s.trimStart, s.trimEnd);
   const main = fitSize(src, s.maxShortSide);
-  // A mobile copy only helps when it is actually smaller than the main one.
-  const mobileCandidate = fitSize(src, MOBILE_SHORT_SIDE);
-  const mobile = s.outputs.mobile && mobileCandidate.width < main.width ? mobileCandidate : null;
+  // A wide video gets a tall crop for phones. Otherwise a phone copy only helps when it is
+  // actually smaller than the main one.
+  const mobileCrop = s.outputs.mobile ? phoneCrop(src, s.phoneFraming, s.focus) : null;
+  const mobileCandidate = mobileCrop
+    ? fitSize({ width: mobileCrop.width, height: mobileCrop.height }, MOBILE_SHORT_SIDE)
+    : fitSize(src, MOBILE_SHORT_SIDE);
+  const mobile = s.outputs.mobile && (mobileCrop || mobileCandidate.width < main.width) ? mobileCandidate : null;
   const frameExt = imageExt();
   return {
     range,
     main,
     mobile,
+    mobileCrop,
     frameExt,
     commands: {
       inputName: p.file.name,
@@ -80,6 +88,7 @@ export function planFor(p: ProbeResult, s: Settings): Plan {
       fps: s.fps,
       main: s.outputs.mp4 ? main : undefined,
       mobile: mobile ?? undefined,
+      mobileCrop: mobileCrop ?? undefined,
       webm: s.outputs.webm ? main : undefined,
       frames: s.outputs.frames ? { size: main, count: s.frameCount, ext: frameExt } : undefined,
     },
@@ -99,6 +108,7 @@ export async function runPipeline(
   const started = performance.now();
   const plan = planFor(p, s);
   const { range, main, mobile } = plan;
+  let hasMobilePoster = false;
   const seconds = range.end - range.start;
   const frameCount = Math.round(seconds * s.fps);
   const files: OutputFile[] = [];
@@ -130,17 +140,30 @@ export async function runPipeline(
     run: async () => {
       const blob = await poster(p.file, main, range.start);
       files.push({ path: PATHS.poster, blob, bytes: blob.size, label: 'Poster image', target: null });
+      if (mobile && plan.mobileCrop) {
+        const phone = await poster(p.file, mobile, range.start, plan.mobileCrop);
+        files.push({ path: PATHS.posterMobile, blob: phone, bytes: phone.size, label: 'Phone poster', target: null });
+        hasMobilePoster = true;
+      }
     },
   });
 
-  const addVideo = (label: string, path: string, size: Size, codec: 'avc' | 'vp9', target: Target, flag: keyof typeof videos) =>
+  const addVideo = (
+    label: string,
+    path: string,
+    size: Size,
+    codec: 'avc' | 'vp9',
+    target: Target,
+    flag: keyof typeof videos,
+    crop?: CropRect,
+  ) =>
     steps.push({
       label,
       weight: pixels(size) * (codec === 'vp9' ? 2 : 1),
       run: async (progress, sig) => {
         const blob = await encodeVideo(
           p.file,
-          { codec, size, fps: s.fps, bitrate: videoBitrate(size, s.fps, s.quality, codec), range },
+          { codec, size, fps: s.fps, bitrate: videoBitrate(size, s.fps, s.quality, codec), range, crop },
           progress,
           sig,
         );
@@ -150,7 +173,7 @@ export async function runPipeline(
     });
 
   if (s.outputs.mp4) addVideo('Making the main video', PATHS.mp4, main, 'avc', 'desktop', 'mp4');
-  if (mobile) addVideo('Making the phone video', PATHS.mobile, mobile, 'avc', 'mobile', 'mobile');
+  if (mobile) addVideo('Making the phone video', PATHS.mobile, mobile, 'avc', 'mobile', 'mobile', plan.mobileCrop ?? undefined);
   else if (s.outputs.mobile && !s.outputs.mp4) addVideo('Making the phone video', PATHS.mobile, main, 'avc', 'mobile', 'mobile');
 
   if (s.outputs.webm) {
@@ -192,6 +215,7 @@ export async function runPipeline(
     videos,
     frames: frames.length ? { count: frames.length, ext: plan.frameExt } : null,
     hasPoster: true,
+    hasMobilePoster,
     scrollLength: s.scrollLength,
     layout: 'full',
     captions: [],
