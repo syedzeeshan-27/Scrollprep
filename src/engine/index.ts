@@ -2,3 +2,4 @@
 export { probe, type ProbeResult } from './probe';
 export { commandsFor, runPipeline, type PipelineResult } from './pipeline';
 export { buildZip } from './zip';
+export { thumbnails } from './frames';

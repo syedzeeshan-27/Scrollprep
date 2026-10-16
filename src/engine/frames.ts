@@ -1,5 +1,5 @@
 import { ALL_FORMATS, BlobSource, CanvasSink, Input } from 'mediabunny';
-import type { Size } from '../core/settings';
+import { frameTimestamps, type Size } from '../core/settings';
 import type { FrameExt } from '../core/snippets';
 import type { Progress } from './encode';
 import { AbortedError, FriendlyError } from './errors';
@@ -60,6 +60,26 @@ export async function extractFrames(
     }
     if (!out.length) throw new FriendlyError('No frames could be read from this video.');
     while (out.length < timestamps.length) out.push(out[out.length - 1]);
+    return out;
+  } finally {
+    input.dispose();
+  }
+}
+
+/** Small JPEG stills spread evenly across the clip, for the caption timeline. */
+export async function thumbnails(file: Blob, count: number, height: number): Promise<Blob[]> {
+  const { input, track } = await openTrack(file);
+  try {
+    const width = Math.max(2, Math.round((height * track.displayWidth) / track.displayHeight / 2) * 2);
+    const sink = new CanvasSink(track, { width, height, fit: 'fill' });
+    const [start, end] = await Promise.all([track.getFirstTimestamp(), track.computeDuration()]);
+    const out: Blob[] = [];
+    let last: Blob | null = null;
+    for await (const wrapped of sink.canvasesAtTimestamps(frameTimestamps({ start, end }, count))) {
+      const blob: Blob | null = wrapped ? await toBlob(wrapped.canvas, 'image/jpeg', 0.7) : last;
+      if (blob) out.push(blob);
+      last = blob;
+    }
     return out;
   } finally {
     input.dispose();

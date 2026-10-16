@@ -747,6 +747,129 @@ input[type='number'] {
   margin-top: 20px;
 }
 
+/* timeline */
+
+.tl {
+  margin: 4px 0 6px;
+  user-select: none;
+  -webkit-user-select: none;
+  /* Labels are shifted back into view with a transform, but their unshifted box would still widen
+     the page on phones. Clip sideways only, so marker stems can still run down over the strip. */
+  overflow-x: clip;
+}
+
+.tl__markers {
+  position: relative;
+  z-index: 2;
+  margin: 0 2px;
+  touch-action: none;
+}
+
+.tl__marker {
+  position: absolute;
+  width: 0;
+}
+
+.tl__label {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 150px;
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid rgba(167, 139, 250, 0.55);
+  border-radius: 99px;
+  background: #1d1638;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: grab;
+  transform: translateX(calc(var(--at, 0) * -100%));
+}
+
+.tl__label span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tl__label b {
+  color: #c4b5fd;
+  font-family: var(--mono);
+  font-weight: 600;
+}
+
+.tl__marker.is-dragging .tl__label {
+  cursor: grabbing;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.tl__marker.is-dragging .tl__label b {
+  color: #fff;
+}
+
+.tl__stem {
+  position: absolute;
+  top: 24px;
+  left: -1px;
+  width: 2px;
+  background: rgba(167, 139, 250, 0.8);
+  pointer-events: none;
+}
+
+.tl__strip {
+  position: relative;
+  height: 56px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #0a0a0e;
+  border: 1px solid var(--line-2);
+  cursor: pointer;
+  touch-action: none;
+}
+
+.tl__thumbs {
+  display: flex;
+  height: 100%;
+}
+
+.tl__thumbs img {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.tl__playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--accent-2);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4), 0 0 12px rgba(34, 211, 238, 0.7);
+  pointer-events: none;
+}
+
+.tl__scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.tl-hint {
+  margin: 4px 0 14px;
+}
+
 .captions ol {
   list-style: none;
   margin: 0 0 10px;

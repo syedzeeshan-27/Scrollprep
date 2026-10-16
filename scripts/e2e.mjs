@@ -191,8 +191,16 @@ async function convert(label, { load, setup, expectError, inspect }) {
   const name = label.replace(/\W+/g, '-').toLowerCase();
   await page.screenshot({ path: join(out, `${name}.png`), fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
-  const pageWidth = await page.evaluate(() => document.documentElement.scrollWidth);
-  check(pageWidth <= 390, `results fit a phone screen (page width ${pageWidth})`);
+  await page.waitForTimeout(300);
+  const fit = await page.evaluate(() => {
+    const vw = document.documentElement.clientWidth;
+    const over = [...document.querySelectorAll('body *')]
+      .filter((e) => e.getBoundingClientRect().right > vw + 1 && !e.closest('pre'))
+      .slice(0, 4)
+      .map((e) => `${e.tagName.toLowerCase()}.${[...e.classList].join('.')}@${Math.round(e.getBoundingClientRect().right)}`);
+    return { width: document.documentElement.scrollWidth, over };
+  });
+  check(fit.width <= 390, `results fit a phone screen (page width ${fit.width}${fit.over.length ? `; too wide: ${fit.over.join(', ')}` : ''})`);
   await page.screenshot({ path: join(out, `${name}-phone.png`), fullPage: true });
   await page.setViewportSize({ width: 1280, height: 900 });
   const [download] = await Promise.all([page.waitForEvent('download'), page.click('#download')]);
@@ -244,6 +252,34 @@ const sample = await convert('Sample all outputs', {
     check(st.layout === 'split' && st.active[0] === 'Lighter than air', `split layout shows the edited text (${st.layout}, ${st.active})`);
     const code = await page.textContent('#code');
     check(code.includes('data-layout="split"') && code.includes('Lighter than air'), 'embed code has the layout and the text');
+
+    // Timeline: stills appear, a real mouse drag moves the text, arrow keys nudge it.
+    await page.waitForFunction(() => document.querySelectorAll('.tl__thumbs img').length === 10, null, { timeout: 15000 });
+    check(true, 'timeline shows 10 stills');
+    const label = page.locator('.tl__marker[data-i="0"] .tl__label');
+    const lb = await label.boundingBox();
+    const sb = await page.locator('.tl__strip').boundingBox();
+    const y0 = await page.evaluate(() => scrollY);
+    await page.mouse.move(lb.x + lb.width / 2, lb.y + lb.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(sb.x + sb.width * 0.8, lb.y + lb.height / 2, { steps: 12 });
+    await page.mouse.up();
+    await page.waitForTimeout(600);
+    const dragged = await page.inputValue('#captions li[data-i="0"] input[type=number]');
+    check(dragged === '80', `dragging the marker sets its time to 80% (got ${dragged})`);
+    check((await page.evaluate(() => scrollY)) === y0, 'dragging does not move the page');
+    await page.waitForFunction(() => document.querySelector('#preview').contentDocument?.readyState === 'complete');
+    await page.waitForTimeout(400);
+    const landed = await (await page.$('#preview')).contentFrame().then((f) =>
+      f.evaluate(() => [...document.querySelectorAll('.scrollscrub__caption.is-active')].map((c) => c.textContent)),
+    );
+    check(landed.includes('Lighter than air'), `preview jumps to where the moved text appears (${landed})`);
+    await label.focus();
+    await page.keyboard.press('ArrowLeft');
+    await page.keyboard.press('Shift+ArrowLeft');
+    const nudged = await page.inputValue('#captions li[data-i="0"] input[type=number]');
+    check(nudged === '74', `arrow keys nudge it to 74% (got ${nudged})`);
+    check((await page.textContent('#code')).includes('data-at="0.74">Lighter than air'), 'embed code follows the timeline');
   },
 });
 if (sample) {

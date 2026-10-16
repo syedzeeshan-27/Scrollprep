@@ -66,7 +66,9 @@ Pick an effect in the app, or set it by hand:
 - **Split** (`data-layout="split"`): a text column beside the video on wide screens. Phones fall
   back to text over the video.
 
-Text over the video appears at chosen points and stays until the next line starts:
+Text over the video appears at chosen points and stays until the next line starts. In the app you
+place it on a timeline of stills from your video: drag a label (or use the arrow keys, Shift for
+bigger steps) and the preview jumps to where it appears. By hand it looks like this:
 
 ```html
 <div class="scrollscrub__captions">

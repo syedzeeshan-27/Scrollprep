@@ -29,6 +29,7 @@ import {
   type Layout,
 } from './core/snippets';
 import { AbortedError, FriendlyError } from './engine/errors';
+import { Timeline } from './ui/timeline';
 import type { PipelineResult, ProbeResult } from './engine';
 
 // The engine pulls in the video library (about 500 KB), so load it only when needed. Start
@@ -89,6 +90,7 @@ const el = {
   layout: $('#layout'),
   captions: $('#captions'),
   addCaption: $<HTMLButtonElement>('#add-caption'),
+  timeline: $('#timeline'),
 };
 
 // ---------- state ----------
@@ -98,6 +100,7 @@ let sourceUrl: string | null = null;
 let result: PipelineResult | null = null;
 let resultUrls: Map<string, string> = new Map();
 let frameUrls: string[] = [];
+let thumbUrls: string[] = [];
 let controller: AbortController | null = null;
 let zipCache: { length: number; blob: Blob } | null = null;
 let previewMode: 'after' | 'before' | 'frames' = 'after';
@@ -170,8 +173,10 @@ el.settings.addEventListener('change', renderEstimate);
 function revoke() {
   for (const u of resultUrls.values()) URL.revokeObjectURL(u);
   for (const u of frameUrls) URL.revokeObjectURL(u);
+  for (const u of thumbUrls) URL.revokeObjectURL(u);
   resultUrls = new Map();
   frameUrls = [];
+  thumbUrls = [];
   zipCache = null;
 }
 
@@ -347,6 +352,7 @@ el.settings.addEventListener('submit', async (e) => {
     codeTab = 'embed';
     renderResults();
     show(el.results);
+    void loadThumbs();
     el.results.scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (err) {
     if (err instanceof AbortedError || controller?.signal.aborted) {
@@ -384,14 +390,93 @@ el.layout.addEventListener('change', (e) => {
 });
 
 let styleTimer: ReturnType<typeof setTimeout> | undefined;
-/** Code updates at once. The preview reloads right away for clicks, after a pause for typing. */
-function styleChanged(now: boolean) {
+/**
+ * Code updates at once. The preview reloads right away for clicks, after a pause for typing.
+ * `seekTo` scrolls the reloaded preview to that point of the effect.
+ */
+function styleChanged(now: boolean, seekTo?: number) {
   zipCache = null;
   renderCode();
   clearTimeout(styleTimer);
-  if (now) renderPreview();
-  else styleTimer = setTimeout(renderPreview, 400);
+  if (now) renderPreview(seekTo);
+  else styleTimer = setTimeout(() => renderPreview(seekTo), 400);
 }
+
+// ---------- preview scroll helpers ----------
+
+function previewSection() {
+  const w = el.preview.contentWindow;
+  const s = w?.document.querySelector<HTMLElement>('[data-scrollscrub]');
+  return w && s ? { w, s } : null;
+}
+
+/** How far through the effect the preview is scrolled, 0 to 1. */
+function previewProgress(): number | null {
+  const p = previewSection();
+  if (!p) return null;
+  const travel = p.s.offsetHeight - p.w.innerHeight;
+  if (travel <= 0) return 0;
+  return Math.min(1, Math.max(0, (p.w.scrollY - p.s.offsetTop) / travel));
+}
+
+function seekPreview(at: number) {
+  const p = previewSection();
+  if (p) p.w.scrollTo(0, p.s.offsetTop + Math.max(0, p.s.offsetHeight - p.w.innerHeight) * at);
+}
+
+// ---------- timeline ----------
+
+const timeline = new Timeline(el.timeline, {
+  onMove(i, at, done) {
+    if (!captions[i]) return;
+    captions[i].at = at;
+    const num = el.captions.querySelector<HTMLInputElement>(`li[data-i="${i}"] input[type=number]`);
+    if (num) num.value = String(Math.round(at * 100));
+    if (done) {
+      // Reload with the new timing and land just after the text appears, so you see it.
+      styleChanged(true, Math.min(1, at + 0.01));
+    } else {
+      zipCache = null;
+      renderCode();
+      seekPreview(at);
+    }
+  },
+  onSeek: seekPreview,
+});
+
+/** Stills for the timeline, from the lightest processed video, or from the image frames. */
+async function loadThumbs() {
+  if (!result) return;
+  const count = 10;
+  const video = [PATHS.mobile, PATHS.mp4, PATHS.webm]
+    .map((p) => result!.files.find((f) => f.path === p)?.blob)
+    .find((b): b is Blob => !!b);
+  try {
+    let blobs: Blob[];
+    if (video) {
+      const { thumbnails } = await engine();
+      blobs = await thumbnails(video, count, 72);
+    } else {
+      const n = result.frames.length;
+      blobs = Array.from({ length: Math.min(count, n) }, (_, i) => result!.frames[Math.floor(((i + 0.5) * n) / count)]);
+    }
+    for (const u of thumbUrls) URL.revokeObjectURL(u);
+    thumbUrls = blobs.map((b) => URL.createObjectURL(b));
+    timeline.setThumbs(thumbUrls);
+  } catch (e) {
+    console.warn('Could not make timeline thumbnails', e);
+  }
+}
+
+// Keep the playhead in step with the preview while results are on screen.
+function followPreview() {
+  if (!el.results.hidden) {
+    const at = previewProgress();
+    if (at != null) timeline.setPlayhead(at);
+  }
+  requestAnimationFrame(followPreview);
+}
+requestAnimationFrame(followPreview);
 
 function renderCaptions() {
   el.captions.innerHTML = captions
@@ -404,6 +489,7 @@ function renderCaptions() {
     )
     .join('');
   el.addCaption.disabled = captions.length >= MAX_CAPTIONS;
+  timeline.setCaptions(captions);
 }
 
 el.captions.addEventListener('input', (e) => {
@@ -412,6 +498,7 @@ el.captions.addEventListener('input', (e) => {
   if (!captions[i]) return;
   if (input.classList.contains('cap-text')) captions[i].text = input.value;
   else captions[i].at = Math.min(100, Math.max(0, Number(input.value) || 0)) / 100;
+  timeline.setCaptions(captions);
   styleChanged(false);
 });
 
@@ -424,15 +511,28 @@ el.captions.addEventListener('click', (e) => {
 });
 
 el.addCaption.addEventListener('click', () => {
-  const lastAt = captions.length ? captions[captions.length - 1].at : 0;
-  captions.push({ text: '', at: Math.min(0.9, Math.round((lastAt + 0.25) * 20) / 20) });
+  // New text goes where the preview is, or a step after the last line.
+  const lastAt = captions.length ? Math.max(...captions.map((c) => c.at)) : 0;
+  const here = previewProgress();
+  const at = here != null && here > 0.02 ? Math.round(here * 100) / 100 : Math.min(0.9, Math.round((lastAt + 0.25) * 20) / 20);
+  captions.push({ text: '', at });
   renderCaptions();
   el.captions.querySelector<HTMLInputElement>('li:last-child .cap-text')?.focus();
 });
 
 renderCaptions();
 
-function renderPreview() {
+// After the preview reloads, either keep the reader's place or jump to a requested point.
+let afterLoad: { y: number; seekTo?: number } | null = null;
+el.preview.addEventListener('load', () => {
+  const a = afterLoad;
+  afterLoad = null;
+  if (!a) return;
+  if (a.seekTo != null) seekPreview(a.seekTo);
+  else el.preview.contentWindow?.scrollTo(0, a.y);
+});
+
+function renderPreview(seekTo?: number) {
   if (!result) return;
   const info = currentInfo();
   const resolve = (path: string) => resultUrls.get(path) ?? path;
@@ -452,9 +552,8 @@ function renderPreview() {
     const desk: ExportInfo = { ...info, videos: { ...info.videos, mobile: info.videos.mobile && !info.videos.mp4 && !info.videos.webm } };
     html = demoPage(desk, { mode: 'video', resolve, runtime: { inline: runtimeSource }, badge: 'After: ScrollPrep' });
   }
-  // Keep the reader's place when the preview reloads after an edit.
-  const y = el.preview.contentWindow?.scrollY ?? 0;
-  el.preview.addEventListener('load', () => el.preview.contentWindow?.scrollTo(0, y), { once: true });
+  // A reload that is still pending keeps the place it already remembered.
+  afterLoad = { y: afterLoad?.y ?? el.preview.contentWindow?.scrollY ?? 0, seekTo };
   el.preview.srcdoc = html;
 }
 
