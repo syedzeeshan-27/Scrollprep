@@ -81,6 +81,20 @@ The section also gets `--scrollscrub-progress` and `--scrollscrub-grow` CSS vari
 you can drive your own styles from the scroll. Visitors who turn on reduced motion get the poster
 with all the text listed underneath.
 
+## Phone framing
+
+A wide video on a tall phone screen either looks tiny or loses its sides. For wide videos the phone
+version is a tall crop (9:16 or 4:5). Click the part of the video that should stay in frame, and
+check the result in the Phone preview. A matching phone poster is swapped in on small screens.
+
+## Background loops
+
+Pick **Background loop** instead of Scroll effect to shrink a video for autoplay behind a page
+header. It keeps normal keyframes (every 2 seconds), strips the sound, caps the size and can
+crossfade the end into the start so you can't see where it restarts. The 4K test clip goes from
+22 MB to under 1 MB. You get an MP4, an optional WebM, a poster, the HTML and CSS, and a small
+script that shows the still poster to visitors who prefer reduced motion.
+
 ## How it works
 
 - **Video engine:** [WebCodecs](https://developer.mozilla.org/docs/Web/API/WebCodecs_API), the

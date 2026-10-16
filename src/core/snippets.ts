@@ -163,7 +163,7 @@ export function demoPage(info: ExportInfo, opts: DemoOptions): string {
   html { background: #08080b; color: #ededf2; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   body { margin: 0; }
   .intro, .outro { min-height: 70vh; display: grid; place-content: center; text-align: center; padding: 0 20px; }
-  .intro h1 { font-size: clamp(28px, 6vw, 56px); margin: 0 0 8px; letter-spacing: -0.02em; }
+  .intro h1 { font-size: clamp(28px, 6vw, 56px); margin: 0 0 8px; letter-spacing: -0.02em; overflow-wrap: anywhere; }
   .intro p, .outro p { color: #9b9bab; margin: 0; }
   .badge { position: fixed; top: 12px; left: 12px; z-index: 5; padding: 4px 10px; border-radius: 99px;
            background: rgba(0,0,0,.6); border: 1px solid rgba(255,255,255,.15); font-size: 12px; }

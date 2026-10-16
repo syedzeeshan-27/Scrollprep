@@ -4,7 +4,7 @@
 //   npm run e2e            (needs Chrome or Edge, plus ffmpeg and ffprobe on PATH)
 //   CHROME_PATH=... npm run e2e
 
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -131,7 +131,7 @@ async function pickLayout(page, id) {
   await page.waitForTimeout(300);
 }
 
-async function convert(label, { load, setup, expectError, inspect }) {
+async function convert(label, { load, setup, expectError, inspect, loop = false }) {
   console.log(`\n== ${label}`);
   const page = await context.newPage();
   const logs = [];
@@ -161,9 +161,18 @@ async function convert(label, { load, setup, expectError, inspect }) {
   console.log(`       converted in ${((Date.now() - t0) / 1000).toFixed(1)} s`);
 
   // The preview iframe must actually scrub: scroll it and the video time should move.
-  await page.waitForFunction(() => !!document.querySelector('#preview').contentDocument?.querySelector('[data-scrollscrub]'), null, { timeout: 15000 }).catch(() => {});
+  // A background loop instead has to autoplay on repeat.
+  const previewReady = loop ? '.bg-video__media' : '[data-scrollscrub]';
+  await page.waitForFunction((sel) => !!document.querySelector('#preview').contentDocument?.querySelector(sel), previewReady, { timeout: 15000 }).catch(() => {});
   const frame = await (await page.$('#preview')).contentFrame();
-  if (frame) {
+  if (frame && loop) {
+    await page.waitForTimeout(1500);
+    const v = await frame.evaluate(() => {
+      const el = document.querySelector('.bg-video__media');
+      return { playing: !el.paused && el.currentTime > 0, loop: el.loop, muted: el.muted };
+    });
+    check(v.playing && v.loop && v.muted, `preview autoplays muted on a loop (${JSON.stringify(v)})`);
+  } else if (frame) {
     await frame.waitForFunction(() => {
       const v = document.querySelector('video');
       return !v || v.readyState >= 1;
@@ -215,8 +224,13 @@ async function convert(label, { load, setup, expectError, inspect }) {
     writeFileSync(target, data);
   }
   const names = Object.keys(files);
-  check(names.includes('demo.html') && names.includes('README.txt') && names.includes('scrollprep/scrollscrub.js'), 'zip has demo, readme and runtime');
-  check(names.includes('scrollprep/poster.jpg'), 'zip has poster');
+  if (loop) {
+    check(names.includes('demo.html') && names.includes('README.txt') && names.includes('background/loop.mp4'), 'zip has demo, readme and loop');
+    check(names.includes('background/poster.jpg'), 'zip has poster');
+  } else {
+    check(names.includes('demo.html') && names.includes('README.txt') && names.includes('scrollprep/scrollscrub.js'), 'zip has demo, readme and runtime');
+    check(names.includes('scrollprep/poster.jpg'), 'zip has poster');
+  }
   check(logs.length === 0, `no console errors${logs.length ? `: ${logs.join(' | ')}` : ''}`);
   await page.close();
   return { dir, names };
@@ -355,7 +369,69 @@ if (tall) {
   check(v && v.frames >= 22 && v.frames <= 26, `trim to 1 s at 24 fps gives about 24 frames (got ${v?.frames})`);
 }
 
-// 4. Not a video at all.
+// 4. Background loop from the 4K clip: shrunk, silent, normal keyframes, seamless wrap-around.
+function frameDiff(file, a, b) {
+  // Mean absolute difference of two frames (0 = identical, 255 = opposite), via ffmpeg's blend.
+  // The metadata filter logs at info level on stderr, so capture that.
+  const res = spawnSync('ffmpeg', [
+    '-hide_banner', '-v', 'info', '-i', file, '-filter_complex',
+    `[0:v]split[x][y];[x]select=eq(n\\,${a}),setpts=PTS-STARTPTS[p];[y]select=eq(n\\,${b}),setpts=PTS-STARTPTS[q];` +
+      `[p][q]blend=all_mode=difference,signalstats,metadata=print:key=lavfi.signalstats.YAVG`,
+    '-frames:v', '1', '-f', 'null', '-',
+  ], { encoding: 'utf8' });
+  return Number(((res.stderr || '') + (res.stdout || '')).match(/YAVG=([\d.]+)/)?.[1]);
+}
+
+const loopRun = await convert('Background loop', {
+  loop: true,
+  load: setInput(fourK),
+  setup: async (page) => {
+    await page.check('#mode input[value="loop"]', { force: true });
+    await page.check('#crossfade input[value="0.5"]', { force: true });
+  },
+  inspect: async (page) => {
+    check(await page.isHidden('#design'), 'effect styling is hidden for loops');
+    const savings = (await page.textContent('#savings')).replace(/\s+/g, ' ');
+    check(/smaller/.test(savings), `before and after size shown (${savings.trim()})`);
+  },
+});
+if (loopRun) {
+  const p = join(loopRun.dir, 'background/loop.mp4');
+  const v = probeVideo(p);
+  console.log(`       loop.mp4: ${v.width}x${v.height} ${v.codec} ${v.frames} frames, ${v.keyframes} keyframes, ${(v.bytes / 1048576).toFixed(2)} MB`);
+  check(v.codec === 'h264' && v.pixFmt === 'yuv420p' && !v.audio, 'loop is silent H.264 yuv420p');
+  check(v.width === 1920 && v.height === 1080, 'loop capped at 1920x1080');
+  check(v.frames === 75, `crossfade shortens 3 s to 2.5 s, 75 frames (got ${v.frames})`);
+  check(v.keyframes >= 1 && v.keyframes <= 3, `normal keyframes, not every frame (got ${v.keyframes})`);
+  const inputBytes = readFileSync(fourK).length;
+  check(v.bytes < inputBytes, `loop is smaller than the input (${(v.bytes / 1048576).toFixed(2)} MB vs ${(inputBytes / 1048576).toFixed(2)} MB)`);
+  const w = probeVideo(join(loopRun.dir, 'background/loop.webm'));
+  check(w.codec === 'vp9' && !w.audio, 'webm loop is silent VP9');
+}
+
+// 5. Seamless check on the sample, which moves a lot: the jump from the loop's last frame back to
+//    its first should look like an ordinary step between neighbouring frames, not a cut.
+const seamless = await convert('Seamless sample loop', {
+  loop: true,
+  load: async (page) => page.click('#sample'),
+  setup: async (page) => {
+    await page.check('#mode input[value="loop"]', { force: true });
+    await page.check('#crossfade input[value="0.5"]', { force: true });
+    await page.uncheck('input[name=loopWebm]');
+  },
+});
+if (seamless) {
+  const p = join(seamless.dir, 'background/loop.mp4');
+  const v = probeVideo(p);
+  const wrap = frameDiff(p, v.frames - 1, 0);
+  const step = (frameDiff(p, 40, 41) + frameDiff(p, 90, 91)) / 2;
+  const far = frameDiff(p, 0, Math.floor(v.frames / 3));
+  console.log(`       difference: last->first ${wrap.toFixed(2)}, neighbours ${step.toFixed(2)}, far apart ${far.toFixed(2)}`);
+  check(Number.isFinite(wrap) && far > step * 2, 'frames far apart differ clearly (the test can tell a cut)');
+  check(wrap <= step * 2, 'wrap-around is as smooth as a normal frame step');
+}
+
+// 5. Not a video at all.
 await convert('Not a video', { load: setInput(notVideo), expectError: true });
 
 // Phone-width screenshot of the landing page for a visual check.

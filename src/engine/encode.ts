@@ -22,6 +22,10 @@ export interface EncodeOptions {
   range: Range;
   /** Region of the source to keep, in source pixels, applied before resizing. */
   crop?: CropRect;
+  /** Seconds between keyframes. 0 (the default) makes every frame a keyframe. */
+  keyFrameInterval?: number;
+  /** Constant (the default) keeps all-keyframe sizes honest. Loops use variable. */
+  bitrateMode?: 'constant' | 'variable';
 }
 
 export type Progress = (fraction: number) => void;
@@ -58,8 +62,8 @@ export async function encodeVideo(file: Blob, o: EncodeOptions, onProgress: Prog
         frameRate: o.fps,
         codec: o.codec,
         // Constant mode: hardware encoders ignore the target in variable mode when every frame is a keyframe.
-        quality: new Quality({ bitrate: o.bitrate, bitrateMode: 'constant' }),
-        keyFrameInterval: 0, // every frame is a keyframe
+        quality: new Quality({ bitrate: o.bitrate, bitrateMode: o.bitrateMode ?? 'constant' }),
+        keyFrameInterval: o.keyFrameInterval ?? 0, // 0: every frame is a keyframe
         forceTranscode: true,
         allowTransformationMetadata: false,
       },

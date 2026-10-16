@@ -42,7 +42,7 @@
             <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0-4.5 4.5M12 4l4.5 4.5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
           </div>
           <p class="drop__title">Drop a video here</p>
-          <p class="drop__hint">MP4, MOV or WebM. Short clips work best.</p>
+          <p class="drop__hint">MP4, MOV or WebM. Make a scroll effect or a light background loop.</p>
           <div class="drop__actions">
             <button class="btn btn--primary" id="choose" type="button">Choose a video</button>
             <button class="btn btn--ghost" id="sample" type="button">Try a sample clip</button>
@@ -61,6 +61,14 @@
 
         <form class="card" id="settings" hidden>
           <div class="card__head"><h2>Settings</h2></div>
+          <fieldset class="mode">
+            <legend>What's it for?</legend>
+            <div class="seg seg--big" id="mode" role="radiogroup" aria-label="What the video is for">
+              <label><input type="radio" name="mode" value="scroll" checked /><span>Scroll effect</span></label>
+              <label><input type="radio" name="mode" value="loop" /><span>Background loop</span></label>
+            </div>
+            <p class="muted small" id="mode-hint">Plays as people scroll. Every frame becomes a full picture so it scrubs smoothly.</p>
+          </fieldset>
           <div class="grid">
             <fieldset>
               <legend>Size</legend>
@@ -93,7 +101,17 @@
             </fieldset>
           </div>
 
-          <fieldset class="outputs">
+          <fieldset class="outputs" data-mode="loop" hidden>
+            <legend>Loop options</legend>
+            <div class="phone-framing__row loop-row">
+              <span class="muted small">Seamless loop</span>
+              <div class="seg" id="crossfade" role="radiogroup" aria-label="Crossfade between the end and the start"></div>
+            </div>
+            <p class="muted small loop-row">Blends the end into the start, so you can't see where the video restarts.</p>
+            <label class="check"><input type="checkbox" name="loopWebm" checked /><span><b>WebM too</b> a smaller file for Chrome and Firefox</span></label>
+          </fieldset>
+
+          <fieldset class="outputs" data-mode="scroll">
             <legend>What to make</legend>
             <label class="check"><input type="checkbox" name="mp4" checked /><span><b>Main video</b> MP4, plays everywhere</span></label>
             <label class="check"><input type="checkbox" name="mobile" checked /><span><b>Phone version</b> lighter 720p MP4 for small screens</span></label>
@@ -174,7 +192,7 @@
             <span class="muted small">Live preview</span>
           </div>
           <iframe id="preview" title="Scroll preview"></iframe>
-          <p class="preview-hint">Scroll inside the box. Switch to <b>Before</b> to feel the difference.</p>
+          <p class="preview-hint" id="preview-hint">Scroll inside the box. Switch to <b>Before</b> to feel the difference.</p>
         </div>
 
         <div class="card">
@@ -182,6 +200,7 @@
             <h2>Your files</h2>
             <span class="muted" id="elapsed"></span>
           </div>
+          <div class="savings" id="savings" hidden></div>
           <ul class="files" id="files"></ul>
           <div id="notes"></div>
           <div class="actions">
@@ -192,7 +211,7 @@
 
         <div class="card">
           <div class="card__head"><h2>Add it to your site</h2></div>
-          <p class="muted">Copy the <code>scrollprep</code> folder from the zip next to your page, then paste this where the effect should go.</p>
+          <p class="muted" id="code-intro">Copy the <code>scrollprep</code> folder from the zip next to your page, then paste this where the effect should go.</p>
           <div class="tabs" id="tabs" role="tablist"></div>
           <div class="code">
             <button class="btn btn--small copy" id="copy" type="button">Copy</button>

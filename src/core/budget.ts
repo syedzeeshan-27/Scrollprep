@@ -1,6 +1,6 @@
 /** File-size guidance. A scroll video has to download before it scrubs, so weight matters. */
 
-export type Target = 'desktop' | 'mobile';
+export type Target = 'desktop' | 'mobile' | 'background';
 export type BudgetLevel = 'ok' | 'heavy' | 'too-heavy';
 
 const MB = 1024 * 1024;
@@ -8,6 +8,8 @@ const MB = 1024 * 1024;
 export const BUDGETS: Record<Target, { ok: number; heavy: number }> = {
   desktop: { ok: 8 * MB, heavy: 20 * MB },
   mobile: { ok: 5 * MB, heavy: 12 * MB },
+  // A background video autoplays on load, so it should be lighter still.
+  background: { ok: 4 * MB, heavy: 10 * MB },
 };
 
 export function rateSize(bytes: number, target: Target): BudgetLevel {

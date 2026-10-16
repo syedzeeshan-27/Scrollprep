@@ -31,7 +31,19 @@ import {
 import { AbortedError, FriendlyError } from './engine/errors';
 import { Timeline } from './ui/timeline';
 import { FRAMINGS, needsCrop, phoneCrop, type Focus } from './core/crop';
-import type { PipelineResult, ProbeResult } from './engine';
+import type { LoopResult, PipelineResult, ProbeResult } from './engine';
+import {
+  CROSSFADES,
+  effectiveFade,
+  LOOP_CSS,
+  LOOP_PATHS,
+  LOOP_SCRIPT,
+  loopBitrate,
+  loopDemoPage,
+  loopDuration,
+  loopEmbed,
+  type LoopSettings,
+} from './core/loop';
 
 // The engine pulls in the video library (about 500 KB), so load it only when needed. Start
 // fetching it once the page is idle so it is usually ready by the time someone drops a file.
@@ -93,6 +105,13 @@ const el = {
   addCaption: $<HTMLButtonElement>('#add-caption'),
   timeline: $('#timeline'),
   phoneFraming: $('#phone-framing'),
+  mode: $('#mode'),
+  modeHint: $('#mode-hint'),
+  crossfade: $('#crossfade'),
+  savings: $('#savings'),
+  codeIntro: $('#code-intro'),
+  design: $('#design'),
+  previewHint: $('#preview-hint'),
   framing: $('#framing'),
   focusWrap: $('#focus-wrap'),
   focus: $('#focus'),
@@ -103,6 +122,8 @@ const el = {
 let source: ProbeResult | null = null;
 let sourceUrl: string | null = null;
 let result: PipelineResult | null = null;
+let loopResult: LoopResult | null = null;
+let mode: 'scroll' | 'loop' = 'scroll';
 let resultUrls: Map<string, string> = new Map();
 let frameUrls: string[] = [];
 let thumbUrls: string[] = [];
@@ -147,6 +168,40 @@ function pill(level: BudgetLevel): string {
   return `<span class="pill pill--${level}">${text}</span>`;
 }
 
+function readLoopSettings(): LoopSettings {
+  const s = readSettings();
+  const f = new FormData(el.settings);
+  const fade = Number(f.get('crossfade'));
+  return {
+    maxShortSide: s.maxShortSide,
+    fps: s.fps,
+    quality: s.quality,
+    trimStart: s.trimStart,
+    trimEnd: s.trimEnd,
+    crossfade: fade === 0 || fade === 1 ? fade : 0.5,
+    webm: f.has('loopWebm'),
+  };
+}
+
+// ---------- mode: scroll effect or background loop ----------
+
+const MODE_TEXT = {
+  scroll: { hint: 'Plays as people scroll. Every frame becomes a full picture so it scrubs smoothly.', go: 'Make it scroll-ready' },
+  loop: { hint: 'Autoplays on repeat behind your page header. Made as small as possible.', go: 'Shrink it' },
+};
+
+el.crossfade.innerHTML = CROSSFADES.map(
+  (c) => `<label><input type="radio" name="crossfade" value="${c.value}" ${c.value === 0.5 ? 'checked' : ''}/><span>${c.label}</span></label>`,
+).join('');
+
+el.mode.addEventListener('change', () => {
+  mode = new FormData(el.settings).get('mode') === 'loop' ? 'loop' : 'scroll';
+  for (const node of el.settings.querySelectorAll<HTMLElement>('[data-mode]')) show(node, node.dataset.mode === mode);
+  el.modeHint.textContent = MODE_TEXT[mode].hint;
+  el.go.textContent = MODE_TEXT[mode].go;
+  renderEstimate();
+});
+
 function renderEstimate() {
   if (!source) return;
   const s = readSettings();
@@ -156,6 +211,16 @@ function renderEstimate() {
   const rows: string[] = [];
   const row = (label: string, bytes: number, target: Target) =>
     rows.push(`<li><span>${label}</span><span class="mono">≈ ${formatBytes(bytes)}</span>${pill(rateSize(bytes, target))}</li>`);
+  if (mode === 'loop') {
+    const ls = readLoopSettings();
+    const fade = effectiveFade(range, ls.crossfade);
+    const len = loopDuration(range, fade);
+    row(`MP4 loop, ${main.width}×${main.height}`, estimateBytes(loopBitrate(main, ls.fps, ls.quality, 'avc'), len), 'background');
+    if (ls.webm) row('WebM loop', estimateBytes(loopBitrate(main, ls.fps, ls.quality, 'vp9'), len), 'background');
+    el.estimate.innerHTML = `<p class="estimate__title">Estimated sizes for a ${formatTime(len)} loop. Your file is ${formatBytes(source.file.size)}.</p><ul>${rows.join('')}</ul>`;
+    el.go.disabled = !source.canDecode;
+    return;
+  }
   if (s.outputs.mp4) row(`Main video, ${main.width}×${main.height}`, estimateBytes(videoBitrate(main, s.fps, s.quality, 'avc'), secs), 'desktop');
   if (s.outputs.mobile) {
     const crop = phoneCrop(source, s.phoneFraming, s.focus);
@@ -249,6 +314,7 @@ function resetAll() {
   sourceUrl = null;
   focusVideo.removeAttribute('src');
   result = null;
+  loopResult = null;
   el.preview.srcdoc = '';
   show(el.workspace, false);
   show(el.results, false);
@@ -388,44 +454,50 @@ el.settings.addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!source || controller) return;
   const s = readSettings();
+  const ls = readLoopSettings();
+  const isLoop = mode === 'loop';
   revoke();
   result = null;
+  loopResult = null;
   show(el.results, false);
   show(el.error, false);
   show(el.progress);
   el.go.disabled = true;
   controller = new AbortController();
   const p = source;
-  const { runPipeline, commandsFor } = await engine();
+  const { runPipeline, commandsFor, runLoop, loopCommandsFor } = await engine();
+  const commands = () => (isLoop ? loopCommandsFor(p, ls) : commandsFor(p, s));
+  const onState = (st: { label: string; step: number; steps: number; overall: number }) => {
+    const pct = Math.round(st.overall * 100);
+    el.progressLabel.textContent = st.label;
+    el.progressStep.textContent = `Step ${st.step} of ${st.steps}`;
+    el.progressPct.textContent = `${pct}%`;
+    el.bar.style.width = `${pct}%`;
+  };
   try {
-    result = await runPipeline(
-      p,
-      s,
-      (st) => {
-        const pct = Math.round(st.overall * 100);
-        el.progressLabel.textContent = st.label;
-        el.progressStep.textContent = `Step ${st.step} of ${st.steps}`;
-        el.progressPct.textContent = `${pct}%`;
-        el.bar.style.width = `${pct}%`;
-      },
-      controller.signal,
-    );
-    for (const f of result.files) if (f.blob) resultUrls.set(f.path, URL.createObjectURL(f.blob));
-    frameUrls = result.frames.map((b) => URL.createObjectURL(b));
-    previewMode = hasVideo(result.info) ? 'after' : 'frames';
+    if (isLoop) {
+      loopResult = await runLoop(p, ls, onState, controller.signal);
+      for (const f of loopResult.files) if (f.blob) resultUrls.set(f.path, URL.createObjectURL(f.blob));
+      previewMode = 'after';
+    } else {
+      result = await runPipeline(p, s, onState, controller.signal);
+      for (const f of result.files) if (f.blob) resultUrls.set(f.path, URL.createObjectURL(f.blob));
+      frameUrls = result.frames.map((b) => URL.createObjectURL(b));
+      previewMode = hasVideo(result.info) ? 'after' : 'frames';
+    }
     codeTab = 'embed';
     renderResults();
     show(el.results);
-    void loadThumbs();
+    if (!isLoop) void loadThumbs();
     el.results.scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (err) {
     if (err instanceof AbortedError || controller?.signal.aborted) {
       showError('Cancelled. Change the settings and try again whenever you like.');
     } else if (err instanceof FriendlyError) {
-      showError(err.message, err.detail, commandsFor(p, s));
+      showError(err.message, err.detail, commands());
     } else {
       console.error(err);
-      showError('Something went wrong while converting.', String(err), commandsFor(p, s));
+      showError('Something went wrong while converting.', String(err), commands());
     }
   } finally {
     controller = null;
@@ -597,6 +669,16 @@ el.preview.addEventListener('load', () => {
 });
 
 function renderPreview(seekTo?: number) {
+  if (loopResult) {
+    const resolve = (path: string) => resultUrls.get(path) ?? path;
+    const before = previewMode === 'before' && sourceUrl;
+    el.preview.classList.remove('is-phone');
+    afterLoad = null;
+    el.preview.srcdoc = before
+      ? loopDemoPage({ ...loopResult.info, hasWebm: false }, (path) => (path === LOOP_PATHS.mp4 ? sourceUrl! : resolve(path)), `Before: your original file (${formatBytes(loopResult.originalBytes)})`)
+      : loopDemoPage(loopResult.info, resolve, `After: ${formatBytes(loopResult.files.find((f) => f.path === LOOP_PATHS.mp4)?.bytes ?? 0)}`);
+    return;
+  }
   if (!result) return;
   const info = currentInfo();
   const resolve = (path: string) => resultUrls.get(path) ?? path;
@@ -630,12 +712,17 @@ function renderPreview(seekTo?: number) {
 }
 
 function renderModes() {
-  if (!result) return;
   const modes: [typeof previewMode, string][] = [];
-  if (hasVideo(result.info)) modes.push(['after', 'After']);
-  if (result.info.videos.mobile) modes.push(['phone', 'Phone']);
-  if (result.info.frames) modes.push(['frames', 'Frames']);
-  modes.push(['before', 'Before']);
+  if (loopResult) {
+    modes.push(['after', 'After'], ['before', 'Before']);
+  } else if (result) {
+    if (hasVideo(result.info)) modes.push(['after', 'After']);
+    if (result.info.videos.mobile) modes.push(['phone', 'Phone']);
+    if (result.info.frames) modes.push(['frames', 'Frames']);
+    modes.push(['before', 'Before']);
+  } else {
+    return;
+  }
   el.previewMode.innerHTML = modes
     .map(
       ([m, label]) =>
@@ -658,19 +745,35 @@ el.length.addEventListener('input', () => {
 el.length.addEventListener('change', () => styleChanged(true));
 
 function renderFiles() {
-  if (!result) return;
-  el.files.innerHTML = result.files
+  const r = loopResult ?? result;
+  if (!r) return;
+  // For a background loop, the before and after file size is the headline.
+  const mp4 = loopResult?.files.find((f) => f.path === LOOP_PATHS.mp4);
+  if (loopResult && mp4) {
+    const saved = Math.max(0, Math.round((1 - mp4.bytes / loopResult.originalBytes) * 100));
+    el.savings.innerHTML = `<span class="mono">${formatBytes(loopResult.originalBytes)}</span> → <b class="mono">${formatBytes(mp4.bytes)}</b>${saved > 0 ? ` <span class="pill pill--ok">${saved}% smaller</span>` : ''}`;
+    show(el.savings);
+  } else {
+    show(el.savings, false);
+  }
+  el.files.innerHTML = r.files
     .map((f) => {
       const rating = f.target ? pill(rateSize(f.bytes, f.target)) : '';
       const advice = f.target && rateSize(f.bytes, f.target) !== 'ok' ? `<small>${budgetAdvice(rateSize(f.bytes, f.target), f.target)}</small>` : '';
       return `<li><div><b>${escapeHtml(f.label)}</b><code>${escapeHtml(f.path)}</code>${advice}</div><span class="mono">${formatBytes(f.bytes)}</span>${rating}</li>`;
     })
     .join('');
-  el.notes.innerHTML = result.notes.map((n) => `<p class="note">${escapeHtml(n)}</p>`).join('');
-  el.elapsed.textContent = `Done in ${formatTime(result.elapsedMs / 1000)}`;
+  el.notes.innerHTML = r.notes.map((n) => `<p class="note">${escapeHtml(n)}</p>`).join('');
+  el.elapsed.textContent = `Done in ${formatTime(r.elapsedMs / 1000)}`;
 }
 
 function codeFor(tab: string): string {
+  if (loopResult) {
+    if (tab === 'embed') return loopEmbed(loopResult.info);
+    if (tab === 'css') return LOOP_CSS;
+    if (tab === 'script') return LOOP_SCRIPT;
+    return loopResult.commands.join('\n');
+  }
   const info = currentInfo();
   if (tab === 'embed') return hasVideo(info) ? videoEmbed(info) : framesEmbed(info);
   if (tab === 'frames') return framesEmbed(info);
@@ -679,10 +782,18 @@ function codeFor(tab: string): string {
 }
 
 function renderCode() {
-  if (!result) return;
-  const tabs: [string, string][] = [['embed', hasVideo(result.info) ? 'Video embed' : 'Frames embed']];
-  if (hasVideo(result.info) && result.info.frames) tabs.push(['frames', 'Frames embed']);
-  tabs.push(['script', 'Script tag'], ['ffmpeg', 'ffmpeg version']);
+  let tabs: [string, string][];
+  if (loopResult) {
+    tabs = [['embed', 'HTML'], ['css', 'CSS'], ['script', 'Reduced motion'], ['ffmpeg', 'ffmpeg version']];
+    el.codeIntro.innerHTML = 'Copy the <code>background</code> folder from the zip next to your page. Put this HTML inside the section it should fill, and add the CSS.';
+  } else if (result) {
+    tabs = [['embed', hasVideo(result.info) ? 'Video embed' : 'Frames embed']];
+    if (hasVideo(result.info) && result.info.frames) tabs.push(['frames', 'Frames embed']);
+    tabs.push(['script', 'Script tag'], ['ffmpeg', 'ffmpeg version']);
+    el.codeIntro.innerHTML = 'Copy the <code>scrollprep</code> folder from the zip next to your page, then paste this where the effect should go.';
+  } else {
+    return;
+  }
   el.tabs.innerHTML = tabs
     .map(([id, label]) => `<button type="button" role="tab" data-tab="${id}" aria-selected="${id === codeTab}">${label}</button>`)
     .join('');
@@ -713,18 +824,20 @@ el.copy.addEventListener('click', async () => {
 });
 
 el.download.addEventListener('click', async () => {
-  if (!result) return;
+  if (!result && !loopResult) return;
   const length = Number(el.length.value) || 3;
   el.download.disabled = true;
   el.download.textContent = 'Packing…';
   try {
     if (!zipCache || zipCache.length !== length) {
-      const { buildZip } = await engine();
-      zipCache = { length, blob: await buildZip({ ...result, info: currentInfo() }, runtimeSource) };
+      const { buildZip, buildLoopZip } = await engine();
+      const blob = loopResult ? await buildLoopZip(loopResult) : await buildZip({ ...result!, info: currentInfo() }, runtimeSource);
+      zipCache = { length, blob };
     }
+    const title = (loopResult ?? result)!.info.title;
     const a = document.createElement('a');
     a.href = URL.createObjectURL(zipCache.blob);
-    a.download = `${result.info.title.replace(/[^\w.-]+/g, '-')}-scrollprep.zip`;
+    a.download = `${title.replace(/[^\w.-]+/g, '-')}-${loopResult ? 'background' : 'scrollprep'}.zip`;
     document.body.append(a);
     a.click();
     a.remove();
@@ -742,6 +855,11 @@ el.again.addEventListener('click', () => {
 });
 
 function renderResults() {
+  // The effect styling (layouts, text, timeline) only applies to scroll videos.
+  show(el.design, !loopResult);
+  el.previewHint.innerHTML = loopResult
+    ? 'Your loop plays behind a sample headline. Switch to <b>Before</b> to see the original file.'
+    : 'Scroll inside the box. Switch to <b>Before</b> to feel the difference.';
   renderModes();
   renderPreview();
   renderFiles();

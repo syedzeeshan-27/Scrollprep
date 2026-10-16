@@ -29,6 +29,7 @@ export interface OutputFile {
 }
 
 export interface PipelineResult {
+  kind: 'scroll';
   files: OutputFile[];
   frames: Blob[];
   info: ExportInfo;
@@ -230,6 +231,6 @@ export async function runPipeline(
     });
   }
 
-  return { files, frames, info, notes, commands: ffmpegCommands(plan.commands), elapsedMs: performance.now() - started };
+  return { kind: 'scroll', files, frames, info, notes, commands: ffmpegCommands(plan.commands), elapsedMs: performance.now() - started };
 }
 
