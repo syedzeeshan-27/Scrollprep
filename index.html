@@ -30,6 +30,13 @@
 
     <main id="main">
       <section class="hero">
+        <!-- Made with ScrollPrep's own Background loop mode: a 5.4 MB clip down to a 0.95 MB WebM. -->
+        <div class="hero__bg" aria-hidden="true">
+          <video muted loop playsinline preload="none" poster="/hero/poster.jpg">
+            <source src="/hero/loop.webm" type="video/webm" />
+            <source src="/hero/loop.mp4" type="video/mp4" />
+          </video>
+        </div>
         <p class="eyebrow">Free · open source · runs in your browser</p>
         <h1>Make any video <span class="grad">scroll-smooth</span>.</h1>
         <p class="lede">
@@ -50,6 +57,46 @@
           </div>
         </div>
       </section>
+
+      <div class="demo" id="demo">
+        <div class="demo__intro">
+          <p class="eyebrow">See it first</p>
+          <h2 class="demo__title">Scroll down. This is what your video turns into.</h2>
+        </div>
+        <section
+          class="scrollscrub demo__scrub"
+          data-scrollscrub
+          data-layout="reveal"
+          data-caption-style="words"
+          style="--scrollscrub-length: 360vh; --scrollscrub-ratio: 1"
+          aria-label="Scroll demo: a camera turns as you scroll"
+        >
+          <div class="scrollscrub__stage">
+            <div class="scrollscrub__frame">
+              <video
+                class="scrollscrub__media"
+                muted
+                playsinline
+                preload="none"
+                poster="/examples/camera/scrollprep/poster.jpg"
+                data-src-mobile="/examples/camera/scrollprep/video-mobile.mp4"
+                data-poster-mobile="/examples/camera/scrollprep/poster-mobile.jpg"
+              >
+                <source src="/examples/camera/scrollprep/video.mp4" type="video/mp4" />
+              </video>
+            </div>
+            <div class="scrollscrub__captions">
+              <div class="scrollscrub__caption" data-at="0.12">Every frame, a full picture.<small>So any point in the scroll lands cleanly.</small></div>
+              <div class="scrollscrub__caption" data-at="0.42">Forwards, backwards, fast or slow.<small>No stutter, no waiting for the video to catch up.</small></div>
+              <div class="scrollscrub__caption" data-at="0.72">From one ordinary clip.<small>Prepped in the browser, nothing uploaded.</small></div>
+            </div>
+          </div>
+        </section>
+        <div class="demo__end">
+          <p class="muted">That was a normal product video, run through ScrollPrep.</p>
+          <button class="btn btn--primary" id="demo-try" type="button">Try it with your video</button>
+        </div>
+      </div>
 
       <section class="workspace" id="workspace" hidden>
         <div class="card" id="source">
@@ -174,6 +221,10 @@
                 <output id="length-out" class="mono">3 screens</output>
               </label>
             </fieldset>
+            <fieldset>
+              <legend>Text style</legend>
+              <div class="seg" id="caption-style" role="radiogroup" aria-label="How the text comes in"></div>
+            </fieldset>
           </div>
           <fieldset class="captions">
             <legend>Text over the video</legend>
@@ -228,11 +279,28 @@
           changes. When scrolling jumps to a random moment, the browser has to rebuild that frame from the last full
           picture, so it lags and jumps.
         </p>
+        <figure class="compare">
+          <video
+            id="compare"
+            muted
+            loop
+            playsinline
+            preload="none"
+            poster="/media/before-after.jpg"
+            aria-label="The same video scrubbed by the same scroll, before and after ScrollPrep. The original lags behind."
+          >
+            <source src="/media/before-after.mp4" type="video/mp4" />
+          </video>
+          <figcaption class="muted small">Both sides follow the same scroll. The left one can only land on a full picture every 3 seconds.</figcaption>
+        </figure>
         <div class="strips" aria-hidden="true">
           <div class="strip"><span class="strip__label">Normal video</span><div class="strip__cells" data-key="15"></div></div>
           <div class="strip"><span class="strip__label">After ScrollPrep</span><div class="strip__cells" data-key="1"></div></div>
         </div>
-        <p class="legend"><i class="dot dot--key"></i> full picture <i class="dot"></i> changes only</p>
+        <p class="legend">
+          <i class="dot dot--key"></i> full picture <i class="dot"></i> changes only
+          <span class="legend__live"><i class="dot dot--on"></i> on screen <i class="dot dot--work"></i> rebuilt to show it</span>
+        </p>
         <ol class="steps">
           <li><b>Drop a video.</b> It stays on your computer. Your browser's own video hardware does the work.</li>
           <li><b>Preview it.</b> Scroll the live preview and compare it with the original.</li>

@@ -16,6 +16,12 @@ const clips = join(root, '.showcase', 'clips');
 mkdirSync(clips, { recursive: true });
 
 const pick = (name, value) => async (page) => page.click(`input[name=${name}][value="${value}"]`, { force: true });
+/** Clicks the phone-framing picker at a fraction of its width and height. */
+const focusAt = (x, y) => async (page) => {
+  const picker = page.locator('#focus');
+  const box = await picker.boundingBox();
+  await picker.click({ position: { x: box.width * x, y: box.height * y } });
+};
 
 export const EXAMPLES = [
   {
@@ -43,6 +49,30 @@ export const EXAMPLES = [
     clip: 'https://videos.pexels.com/video-files/28903385/12510984_1920_1080_60fps.mp4',
     folder: 'background',
     setup: [pick('mode', 'loop'), pick('crossfade', 1)],
+  },
+  {
+    id: 'watch',
+    clip: 'https://videos.pexels.com/video-files/39108088/16639006_1920_1080_25fps.mp4',
+    folder: 'scrollprep',
+    trim: [0, 8],
+    // The dial sits left of centre, so keep it in the phone crop.
+    setup: [pick('fps', 24), focusAt(0.42, 0.5)],
+  },
+  {
+    // 1440p source: scaling down to 1080p keeps the sand and surf crisp.
+    id: 'beach',
+    clip: 'https://videos.pexels.com/video-files/29358392/12651267_2560_1440_30fps.mp4',
+    folder: 'scrollprep',
+    trim: [2, 11],
+    setup: [pick('fps', 24)],
+  },
+  {
+    // The ScrollPrep homepage's own header video, made with the Background loop mode.
+    id: 'hero',
+    clip: 'https://videos.pexels.com/video-files/38357188/16288226_1920_1080_30fps.mp4',
+    folder: 'background',
+    target: 'public/hero',
+    setup: [pick('mode', 'loop'), pick('size', 720), pick('crossfade', 1)],
   },
 ];
 
@@ -91,7 +121,7 @@ for (const ex of EXAMPLES) {
   const zipPath = join(root, '.showcase', `${ex.id}.zip`);
   await download.saveAs(zipPath);
 
-  const target = join(root, 'public', 'examples', ex.id, ex.folder);
+  const target = ex.target ? join(root, ex.target) : join(root, 'public', 'examples', ex.id, ex.folder);
   rmSync(target, { recursive: true, force: true });
   for (const [path, data] of Object.entries(unzipSync(readFileSync(zipPath)))) {
     if (!path.startsWith(`${ex.folder}/`) || path.endsWith('/')) continue;

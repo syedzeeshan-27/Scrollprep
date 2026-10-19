@@ -97,6 +97,8 @@ h2 {
 /* ---------- top bar ---------- */
 
 .topbar {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -160,8 +162,40 @@ main {
 }
 
 .hero {
+  position: relative;
+  isolation: isolate;
   padding: 48px 0 24px;
   text-align: center;
+}
+
+/* The header video runs edge to edge behind the top bar and the hero, and fades into the page. */
+.hero__bg {
+  position: absolute;
+  z-index: -1;
+  top: -84px;
+  bottom: -60px;
+  left: calc(50% - 50vw);
+  width: 100vw;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(#000 50%, transparent);
+  mask-image: linear-gradient(#000 50%, transparent);
+}
+
+.hero__bg video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.75;
+}
+
+/* Darken behind the text so the headline and drop zone stay easy to read. */
+.hero__bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(60% 60% at 50% 45%, rgba(9, 9, 12, 0.6), rgba(9, 9, 12, 0.1) 80%);
 }
 
 .eyebrow {
@@ -1062,6 +1096,122 @@ input[type='text'] {
   max-height: 420px;
 }
 
+/* ---------- landing scroll demo ---------- */
+
+/* The section bleeds to the screen edges. Clip sideways so 100vw never adds a horizontal scrollbar. */
+body {
+  overflow-x: clip;
+}
+
+.demo {
+  margin-top: 24px;
+}
+
+.demo__intro {
+  text-align: center;
+  padding: 40px 0 8px;
+}
+
+.demo__title {
+  font-size: clamp(24px, 3.5vw, 34px);
+}
+
+.demo__scrub {
+  margin-inline: calc(50% - 50vw);
+}
+
+.demo__scrub .scrollscrub__frame {
+  background: var(--bg);
+}
+
+/* Height, sticky stage and text position up front, so the page doesn't jump when the player script
+   arrives. Reduced motion is left to the player's own still layout. */
+@media (prefers-reduced-motion: no-preference) {
+  .demo__scrub {
+    position: relative;
+    height: var(--scrollscrub-length);
+  }
+  .demo__scrub > .scrollscrub__stage {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    height: 100svh;
+    overflow: hidden;
+  }
+  .demo__scrub .scrollscrub__frame {
+    position: absolute;
+    inset: 0;
+  }
+  .demo__scrub .scrollscrub__captions {
+    background: none;
+    height: 100%;
+  }
+  .demo__scrub .scrollscrub__caption {
+    left: max(6vw, calc(50vw - 560px));
+    bottom: auto;
+    top: 50%;
+    transform: translateY(-50%);
+    max-width: 8.5em;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) and (max-width: 720px) {
+  .demo__scrub .scrollscrub__caption {
+    top: auto;
+    bottom: 8vh;
+    transform: none;
+  }
+}
+
+.demo__scrub .scrollscrub__media {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Fade the square video's edges into the page. */
+.demo__scrub .scrollscrub__frame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle closest-side, rgba(9, 9, 12, 0) 60%, var(--bg) 100%);
+}
+
+.demo:not(.is-live) .scrollscrub__captions {
+  visibility: hidden;
+}
+
+.demo__scrub .scrollscrub__caption {
+  font-size: clamp(28px, 3.6vw, 52px);
+  letter-spacing: -0.035em;
+  text-shadow: none;
+}
+
+.demo__scrub .scrollscrub__caption small {
+  display: block;
+  margin-top: 14px;
+  max-width: 18em;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.demo__end {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  padding: 24px 0 16px;
+  text-align: center;
+}
+
+.demo__end p {
+  margin: 0;
+}
+
 /* ---------- how it works ---------- */
 
 .how {
@@ -1072,6 +1222,23 @@ input[type='text'] {
 
 .how h2 {
   font-size: clamp(24px, 3.5vw, 34px);
+}
+
+.compare {
+  margin: 28px 0 0;
+}
+
+.compare video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: #09090c;
+}
+
+.compare figcaption {
+  margin-top: 10px;
 }
 
 .strips {
@@ -1104,11 +1271,35 @@ input[type='text'] {
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.05);
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+/* Animated: the frames the browser has to work through to show the one under the playhead. */
+.strip__cells i.work {
+  background-color: rgba(167, 139, 250, 0.38);
+  transition: none;
 }
 
 .strip__cells i.key {
   background: linear-gradient(180deg, var(--accent), #5b8cff);
   border-color: transparent;
+}
+
+/* Lights up at once (a tick is shorter than the fade), then fades out as the playhead moves on. */
+.strip__cells i.on {
+  background: var(--accent-2);
+  box-shadow: 0 0 14px rgba(34, 211, 238, 0.65);
+  transition: none;
+}
+
+.dot.dot--work {
+  background: rgba(167, 139, 250, 0.45);
+}
+
+.dot.dot--on {
+  background: var(--accent-2);
 }
 
 .legend {
@@ -1209,6 +1400,13 @@ input[type='text'] {
   }
   .strip__cells i {
     height: 24px;
+  }
+  .demo__scrub .scrollscrub__caption {
+    font-size: clamp(26px, 7vw, 36px);
+  }
+  /* The phone video is portrait, so a round fade would hide most of it. */
+  .demo__scrub .scrollscrub__frame::after {
+    background: radial-gradient(ellipse closest-side, rgba(9, 9, 12, 0) 70%, var(--bg) 100%);
   }
   .estimate li,
   .files li {

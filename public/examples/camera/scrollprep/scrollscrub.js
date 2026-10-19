@@ -21,10 +21,14 @@
  * Optional extras:
  *   data-layout="card"   the video starts as a rounded card and grows to fill the screen
  *   data-layout="split"  text column beside the video on wide screens
+ *   data-layout="reveal" the video opens out of a small circle
+ *   data-layout="zoom"   the video starts zoomed in and pulls back
  *   Text over the video, each shown from its data-at (0 to 1) until the next one starts:
  *     <div class="scrollscrub__captions">
  *       <div class="scrollscrub__caption" data-at="0.15">Waterproof</div>
  *     </div>
+ *   data-caption-style="words" | "blur" | "mask" on the section changes how text comes in
+ *   (one word at a time, out of a blur, or wiping up). Fades up when left out.
  *   The section gets CSS variables --scrollscrub-progress and --scrollscrub-grow (0 to 1) for
  *   your own styling.
  */
@@ -49,9 +53,27 @@
       'text-shadow:0 2px 30px rgba(0,0,0,.45);opacity:0;transform:translateY(28px);' +
       'transition:opacity .5s ease,transform .6s cubic-bezier(.2,.7,.2,1)}' +
     '.scrollscrub__caption.is-active{opacity:1;transform:none}' +
+    // Caption styles. Words: the runtime wraps each word so they can arrive one after another.
+    '[data-caption-style=words] .scrollscrub__caption{opacity:1;transform:none}' +
+    '.scrollscrub__word{display:inline-block;opacity:0;transform:translateY(.55em);filter:blur(6px);' +
+      'transition:opacity .45s ease,transform .6s cubic-bezier(.2,.7,.2,1),filter .5s ease;' +
+      'transition-delay:calc(var(--i,0) * 55ms)}' +
+    '.is-active .scrollscrub__word{opacity:1;transform:none;filter:none}' +
+    '.scrollscrub__caption:not(.is-active) .scrollscrub__word{transition-delay:0s;transition-duration:.25s}' +
+    '[data-caption-style=blur] .scrollscrub__caption{filter:blur(16px);transform:scale(1.05);' +
+      'transition:opacity .6s ease,filter .8s ease,transform .9s cubic-bezier(.2,.7,.2,1)}' +
+    '[data-caption-style=blur] .scrollscrub__caption.is-active{filter:none;transform:none}' +
+    '[data-caption-style=mask] .scrollscrub__caption{opacity:1;transform:translateY(.35em);' +
+      'clip-path:inset(100% -10% 0 -10%);' +
+      'transition:clip-path .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}' +
+    '[data-caption-style=mask] .scrollscrub__caption.is-active{transform:none;clip-path:inset(-25% -10% -25% -10%)}' +
     // Card: starts small with rounded corners and grows to fill the screen.
     '[data-layout=card] .scrollscrub__frame{transform:scale(calc(.6 + .4 * var(--scrollscrub-grow,0)));' +
       'border-radius:calc(36px * (1 - var(--scrollscrub-grow,0)));will-change:transform}' +
+    // Reveal: opens out of a small circle. 72% of the circle reference covers the corners.
+    '[data-layout=reveal] .scrollscrub__frame{clip-path:circle(calc(8% + 64% * var(--scrollscrub-grow,0)) at 50% 50%)}' +
+    // Zoom out: starts close and pulls back to the full picture.
+    '[data-layout=zoom] .scrollscrub__media{transform:scale(calc(1.45 - .45 * var(--scrollscrub-grow,0)));will-change:transform}' +
     // Split: text column beside the video on wide screens. Phones fall back to text over the video.
     '@media (min-width:768px){' +
       '[data-layout=split]>.scrollscrub__stage{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);' +
@@ -61,16 +83,18 @@
         'width:min(100%,calc(78vh * var(--scrollscrub-ratio,1.7778)));aspect-ratio:var(--scrollscrub-ratio,1.7778)}' +
       '[data-layout=split] .scrollscrub__captions{position:relative;height:auto;background:none;display:grid;gap:4vh;order:1}' +
       '[data-layout=split] .scrollscrub__caption{position:relative;left:auto;right:auto;bottom:auto;color:inherit;' +
-        'text-shadow:none;font-size:clamp(22px,2.8vw,40px);opacity:.22;transform:none}' +
+        'text-shadow:none;font-size:clamp(22px,2.8vw,40px);opacity:.22;transform:none;filter:none;clip-path:none}' +
       '[data-layout=split] .scrollscrub__caption.is-active{opacity:1}' +
+      '[data-layout=split] .scrollscrub__word{opacity:1;transform:none;filter:none}' +
     '}' +
     // Reduced motion: a still poster with the text listed underneath.
     ':where(.scrollscrub--static){height:auto}' +
     '.scrollscrub--static>.scrollscrub__stage{position:relative;height:auto}' +
-    '.scrollscrub--static .scrollscrub__frame{position:relative;height:80vh;height:80svh;transform:none;border-radius:0}' +
+    '.scrollscrub--static .scrollscrub__frame{position:relative;height:80vh;height:80svh;transform:none;border-radius:0;clip-path:none}' +
+    '.scrollscrub--static .scrollscrub__media{transform:none}' +
     '.scrollscrub--static .scrollscrub__captions{position:relative;height:auto;background:none;padding:24px 6vw;display:grid;gap:16px}' +
     '.scrollscrub--static .scrollscrub__caption{position:relative;left:auto;right:auto;bottom:auto;opacity:1;' +
-      'transform:none;color:inherit;text-shadow:none}';
+      'transform:none;color:inherit;text-shadow:none;filter:none;clip-path:none}';
 
   var instances = [];
   var running = false;
@@ -210,8 +234,36 @@
    * --scrollscrub-grow (eased 0 to 1 over the first 40%) for CSS, and marks the caption whose
    * moment has come with .is-active. A caption shows from its data-at until the next one starts.
    */
+  /** Wraps every word under `node` in a span numbered from `n`, for the word-by-word style. */
+  function splitWords(node, n) {
+    var kids = Array.prototype.slice.call(node.childNodes);
+    for (var i = 0; i < kids.length; i++) {
+      var kid = kids[i];
+      if (kid.nodeType === 1) { n = splitWords(kid, n); continue; }
+      if (kid.nodeType !== 3 || !kid.nodeValue.trim()) continue;
+      var frag = document.createDocumentFragment();
+      var parts = kid.nodeValue.split(/(\s+)/);
+      for (var j = 0; j < parts.length; j++) {
+        if (!parts[j]) continue;
+        if (/^\s+$/.test(parts[j])) { frag.appendChild(document.createTextNode(parts[j])); continue; }
+        var w = document.createElement('span');
+        w.className = 'scrollscrub__word';
+        w.style.setProperty('--i', String(n++));
+        w.textContent = parts[j];
+        frag.appendChild(w);
+      }
+      node.replaceChild(frag, kid);
+    }
+    return n;
+  }
+
   function Scene(el, isStatic) {
     var nodes = el.querySelectorAll('.scrollscrub__caption');
+    if (!isStatic && el.getAttribute('data-caption-style') === 'words') {
+      for (var w = 0; w < nodes.length; w++) {
+        if (!nodes[w].querySelector('.scrollscrub__word')) splitWords(nodes[w], 0);
+      }
+    }
     var items = [];
     for (var i = 0; i < nodes.length; i++) {
       items.push({ el: nodes[i], at: parseFloat(nodes[i].getAttribute('data-at')) || 0 });

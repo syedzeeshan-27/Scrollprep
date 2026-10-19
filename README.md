@@ -26,6 +26,13 @@ video and it stutters, because videos only store a full picture (a *keyframe*) e
 Everything in between is just the changes, so when the scroll jumps to a random moment the browser
 has to rebuild that frame from the last keyframe. It lags.
 
+<p align="center">
+  <img src="docs/media/before-after.gif" width="720" alt="The same video scrubbed by the same scroll, before and after ScrollPrep. The original lags and jumps, the ScrollPrep version follows smoothly.">
+</p>
+
+Same clip, same scroll, same player. On the left is the original, with a full picture every 3 seconds.
+On the right is the ScrollPrep copy, where every frame is a full picture.
+
 The fix is to re-save the video so every frame is a keyframe, at a sensible size, without sound, in a
 format Safari accepts. That used to mean ffmpeg commands like this one:
 
@@ -39,7 +46,7 @@ the files and a tiny player.
 
 ## Examples
 
-Four free clips from [Pexels](https://www.pexels.com), each run through ScrollPrep and dropped into a
+Six free clips from [Pexels](https://www.pexels.com), each run through ScrollPrep and dropped into a
 small made-up website. The GIFs are recordings of those real pages being scrolled. You can
 scroll them yourself on the [live examples page](https://scrollprep.vercel.app/examples/). The page source is
 in [`public/examples`](public/examples).
@@ -77,7 +84,34 @@ in [`public/examples`](public/examples).
       <sub><a href="https://scrollprep.vercel.app/examples/retreat/">Open it live</a> · <a href="public/examples/retreat/index.html">Page source</a></sub>
     </td>
   </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/media/watch.gif" alt="A watch dial opens out of a circle as the page scrolls">
+      <p><b>Watch dial</b> · Circle reveal effect, word by word text<br>
+      The dial opens out of a small circle, then each line of text arrives one word at a time.
+      8 seconds of a 40 second clip, 5.9 MB.</p>
+      <sub><a href="https://scrollprep.vercel.app/examples/watch/">Open it live</a> · <a href="public/examples/watch/index.html">Page source</a></sub>
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/media/beach.gif" alt="A top-down drone shot of a beach turns and pulls back as the page scrolls">
+      <p><b>Beach from above</b> · Zoom out effect, blur in text<br>
+      A drone looks straight down at the shoreline, turning as you scroll, and pulls back while the
+      text comes into focus. 9 seconds from a 1440p clip, 7.1 MB.</p>
+      <sub><a href="https://scrollprep.vercel.app/examples/beach/">Open it live</a> · <a href="public/examples/beach/index.html">Page source</a></sub>
+    </td>
+  </tr>
 </table>
+
+### On the ScrollPrep homepage
+
+<img align="right" src="docs/media/landing.gif" width="360" alt="The ScrollPrep homepage: a looping header video, then a camera that opens out of a circle as you scroll">
+
+The homepage uses its own output. The dark pattern behind the header is a 10 second Pexels clip run
+through **Background loop**, which shrank it from 5.4 MB to a 0.95 MB WebM (1.4 MB MP4 for Safari) with a seamless crossfade.
+Under the drop zone there's a live scroll demo (Circle reveal with word by word text) so you can feel
+the effect before you try your own video.
+
+<br clear="right">
 
 ### On phones
 
@@ -134,11 +168,20 @@ The section's height sets how long the effect lasts. `300vh` means three screens
 
 Pick an effect in the app, or set it by hand:
 
+<p align="center">
+  <img src="docs/media/effects.gif" width="640" alt="Six tiles scrubbing on one scroll: full screen, card grows, split, circle reveal, zoom out and the slide-from-mask text style">
+</p>
+
 - **Full screen** (default): the video fills the screen and scrubs.
 - **Card grows** (`data-layout="card"`): the video starts as a rounded card and grows to fill the
   screen over the first 40% of the scroll.
 - **Split** (`data-layout="split"`): a text column beside the video on wide screens. Phones fall
   back to text over the video.
+- **Circle reveal** (`data-layout="reveal"`): the video opens out of a small circle in the middle.
+- **Zoom out** (`data-layout="zoom"`): the video starts zoomed in and pulls back to the full picture.
+
+Text can come in four ways, set with `data-caption-style` on the section: fade up (the default),
+`words` (one word at a time), `blur` (out of a blur) or `mask` (wiping up from behind a line).
 
 Text appears at chosen points and stays until the next line starts. In the app you place it on a
 timeline of stills from your video: drag a label (or use the arrow keys, Shift for bigger steps) and
@@ -164,6 +207,14 @@ poster, the HTML and CSS, and a small script that shows the still poster to visi
 reduced motion.
 
 ## How it works
+
+<p align="center">
+  <img src="docs/media/how-it-works.gif" width="720" alt="Two strips of frames. On the normal video, every frame since the last full picture lights up to show one frame. After ScrollPrep, only the frame on screen lights up.">
+</p>
+
+Each square is a frame. Blue squares are full pictures. When the scroll lands on a frame (cyan), a
+normal video has to rebuild it from the last full picture, so every frame in between lights up too.
+After ScrollPrep every frame is a full picture, so the browser just shows the one you're on.
 
 - **Video engine:** [WebCodecs](https://developer.mozilla.org/docs/Web/API/WebCodecs_API), the
   browser's built-in and usually hardware-accelerated encoder, through
@@ -205,9 +256,10 @@ node scripts/showcase.mjs
 node scripts/record.mjs
 ```
 
-The first downloads the Pexels clips and runs each one through the app. The second scrolls each
-example page in headless Chrome, takes a screenshot per step and turns them into the GIFs in
-`docs/media`.
+The first downloads the Pexels clips and runs each one through the app (including the homepage's
+header loop, which lands in `public/hero`). The second scrolls each example page in headless Chrome,
+takes a screenshot per step and turns them into the GIFs in `docs/media`. The before/after GIF comes
+from the comparison that `scripts/launch-clip.mjs` records.
 
 Code layout:
 
@@ -230,8 +282,11 @@ Example footage from Pexels, free to use under the [Pexels license](https://www.
 - Coffee: [Joshua Woroniecki](https://www.pexels.com/@joshuaworoniecki)
 - Coast: [Luz Calor Som](https://www.pexels.com/@luz-calor-som-99374650)
 - Mountains: [Alex Moliski](https://www.pexels.com/@alexmoliski)
+- Watch: [Jourean van Beek](https://www.pexels.com/@jourean-van-beek-2152972005)
+- Beach: [sayari bechir](https://www.pexels.com/@bechir)
+- Homepage background: [Nicola Narracci](https://www.pexels.com/@nicola-narracci-157460431)
 
-The brands in the examples (Kestrel, Ember & Oak, Saltline, Hollow Pines) are made up.
+The brands in the examples (Kestrel, Ember & Oak, Saltline, Hollow Pines, Halden, Marea) are made up.
 
 ## License
 

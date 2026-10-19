@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Halden | ScrollPrep example</title>
+<meta name="description" content="Example watch page: the dial opens out of a circle as you scroll, with text arriving word by word. Made with ScrollPrep.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #07080d; --fg: #eef0f6; --muted: #8d93a6; --copper: #d29a6c; }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); color: var(--fg); font-family: Inter, system-ui, sans-serif; }
+  body { margin: 0; }
+  a { color: inherit; text-decoration: none; }
+  .serif { font-family: "Playfair Display", Georgia, serif; font-weight: 400; }
+  .nav { display: flex; align-items: center; justify-content: space-between; padding: 24px 6vw; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; }
+  .nav .logo { font-size: 22px; letter-spacing: .32em; }
+  .nav nav { display: flex; gap: 34px; color: var(--muted); }
+  .nav .shop { color: var(--copper); }
+  @media (max-width: 700px) { .nav nav { display: none; } }
+
+  .hero { min-height: 82vh; display: grid; place-content: center; text-align: center; padding: 8vh 6vw; }
+  .tag { color: var(--copper); font-size: 12px; letter-spacing: .28em; text-transform: uppercase; margin: 0 0 26px; }
+  .hero h1 { margin: 0; font-size: clamp(50px, 8.5vw, 128px); line-height: .95; letter-spacing: -.02em; }
+  .hero h1 em { color: var(--copper); }
+  .hero p { color: var(--muted); font-size: 17px; line-height: 1.7; margin: 28px auto 0; max-width: 30em; }
+
+  /* Circle reveal: the dial opens out of a small circle, then the text arrives word by word. */
+  .dial .scrollscrub__frame { background: var(--bg); }
+  .dial .scrollscrub__captions { background: linear-gradient(90deg, rgba(7,8,13,0) 40%, rgba(7,8,13,.75)); height: 100%; }
+  .dial .scrollscrub__caption { left: auto; right: 6vw; bottom: auto; top: 50%; margin-top: -1.2em; max-width: 8em; text-align: right;
+    font-family: "Playfair Display", Georgia, serif; font-weight: 400; font-size: clamp(30px, 4vw, 60px); letter-spacing: -.01em; text-shadow: none; }
+  .dial .scrollscrub__caption small { display: block; font-family: Inter, system-ui, sans-serif; font-size: 15px; letter-spacing: .02em;
+    color: var(--muted); margin-top: 16px; line-height: 1.6; }
+  @media (max-width: 767px) {
+    .dial .scrollscrub__captions { background: linear-gradient(rgba(7,8,13,0) 45%, rgba(7,8,13,.8)); }
+    .dial .scrollscrub__caption { right: 6vw; left: 6vw; top: auto; bottom: 9vh; margin: 0; text-align: left; }
+  }
+
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 40px; max-width: 1100px; margin: 0 auto; padding: 16vh 6vw 12vh; }
+  .facts b { display: block; font-size: 44px; color: var(--copper); margin-bottom: 6px; }
+  .facts span { color: var(--muted); font-size: 15px; line-height: 1.6; }
+  .foot { text-align: center; padding: 6vh 6vw 10vh; color: #5b6070; font-size: 13px; border-top: 1px solid rgba(255,255,255,.06); }
+  .foot a { text-decoration: underline; }
+</style>
+</head>
+<body>
+<header class="nav">
+  <a class="logo serif" href="#">HALDEN</a>
+  <nav><a href="#">Collections</a><a href="#">Craft</a><a href="#">Stores</a></nav>
+  <a class="shop" href="#">Shop</a>
+</header>
+
+<section class="hero">
+  <p class="tag">The Meridian Chronograph</p>
+  <h1 class="serif">Time, in <em>deep</em> blue.</h1>
+  <p>A sunray dial, a rose-gold case and a strap cut from a single hide. Scroll to open it up.</p>
+</section>
+
+<section class="scrollscrub dial" data-scrollscrub data-layout="reveal" data-caption-style="words" style="--scrollscrub-length:360vh;--scrollscrub-ratio:1.7778">
+  <div class="scrollscrub__stage">
+    <div class="scrollscrub__frame">
+      <video class="scrollscrub__media" muted playsinline preload="auto" poster="scrollprep/poster.jpg"
+             data-src-mobile="scrollprep/video-mobile.mp4" data-poster-mobile="scrollprep/poster-mobile.jpg">
+        <source src="scrollprep/video.mp4" type="video/mp4">
+      </video>
+    </div>
+    <div class="scrollscrub__captions">
+      <div class="scrollscrub__caption" data-at="0.3">A dial like the night sea.<small>Brushed in sunray lines that catch every light.</small></div>
+      <div class="scrollscrub__caption" data-at="0.62">Rose gold, warm to the touch.<small>A 41 mm case, polished by hand.</small></div>
+    </div>
+  </div>
+</section>
+
+<section class="facts">
+  <div><b class="serif">41 mm</b><span>Rose-gold steel case, sapphire glass front and back.</span></div>
+  <div><b class="serif">100 m</b><span>Water resistant, so it can stay on for the swim.</span></div>
+  <div><b class="serif">42 h</b><span>Of power from a single wind.</span></div>
+</section>
+
+<p class="foot">Halden is a made-up brand for this demo. Scroll video made with <a href="/">ScrollPrep</a>. Footage by Jourean van Beek on Pexels.</p>
+<script src="scrollprep/scrollscrub.js" defer></script>
+</body>
+</html>

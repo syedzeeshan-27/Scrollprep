@@ -14,6 +14,7 @@ import {
   type Settings,
 } from './core/settings';
 import {
+  CAPTION_STYLES,
   cleanCaptions,
   demoPage,
   escapeHtml,
@@ -25,6 +26,7 @@ import {
   scriptTag,
   videoEmbed,
   type Caption,
+  type CaptionStyle,
   type ExportInfo,
   type Layout,
 } from './core/snippets';
@@ -101,6 +103,7 @@ const el = {
   code: $('#code'),
   copy: $<HTMLButtonElement>('#copy'),
   layout: $('#layout'),
+  captionStyle: $('#caption-style'),
   captions: $('#captions'),
   addCaption: $<HTMLButtonElement>('#add-caption'),
   timeline: $('#timeline'),
@@ -132,6 +135,7 @@ let zipCache: { length: number; blob: Blob } | null = null;
 let previewMode: 'after' | 'phone' | 'before' | 'frames' = 'after';
 let codeTab = 'embed';
 let layout: Layout = 'full';
+let captionStyle: CaptionStyle = 'rise';
 /** What the phone crop centres on, picked by clicking the video. */
 let focus: Focus = { x: 0.5, y: 0.5 };
 // Example lines so the effect is visible straight away. Easy to edit or remove.
@@ -320,8 +324,38 @@ function resetAll() {
   show(el.results, false);
   show(el.progress, false);
   show(el.error, false);
-  document.querySelector('.hero')?.removeAttribute('hidden');
+  showLanding(true);
   el.file.value = '';
+}
+
+const demoVideo = document.querySelector<HTMLVideoElement>('.demo__scrub video');
+let landingShown = true;
+let demoSrc = '';
+
+/**
+ * The hero and the scroll demo under it belong to the landing page only. While they're hidden the
+ * demo video is unloaded, so it isn't holding memory and a decoder while the studio works.
+ */
+function showLanding(on: boolean) {
+  if (on === landingShown) return;
+  landingShown = on;
+  for (const n of document.querySelectorAll('.hero, .demo')) n.toggleAttribute('hidden', !on);
+  const hero = document.querySelector<HTMLVideoElement>('.hero__bg video');
+  if (hero && hero.preload === 'auto') {
+    if (on) hero.play().catch(() => {});
+    else hero.pause();
+  }
+  if (!demoVideo) return;
+  if (!on && demoVideo.currentSrc) {
+    demoSrc = demoVideo.currentSrc;
+    demoVideo.pause();
+    for (const s of demoVideo.querySelectorAll('source')) s.remove();
+    demoVideo.removeAttribute('src');
+    demoVideo.load();
+  } else if (on && demoSrc) {
+    demoVideo.src = demoSrc;
+    demoVideo.load();
+  }
 }
 
 function showError(message: string, detail?: string, commands?: string[]) {
@@ -346,7 +380,7 @@ function diagnosis(p: ProbeResult): string {
 
 async function loadFile(file: File) {
   resetAll();
-  document.querySelector('.hero')?.setAttribute('hidden', '');
+  showLanding(false);
   show(el.workspace);
   show(el.settings, false);
   el.sourceBody.innerHTML = `<p class="muted">Reading ${escapeHtml(file.name)}…</p>`;
@@ -511,7 +545,13 @@ el.cancel.addEventListener('click', () => controller?.abort());
 // ---------- results ----------
 
 function currentInfo(): ExportInfo {
-  return { ...result!.info, scrollLength: Number(el.length.value) || 3, layout, captions: cleanCaptions(captions) };
+  return {
+    ...result!.info,
+    scrollLength: Number(el.length.value) || 3,
+    layout,
+    captions: cleanCaptions(captions),
+    captionStyle,
+  };
 }
 
 // ---------- effect style: layout and text ----------
@@ -523,6 +563,18 @@ el.layout.innerHTML = LAYOUTS.map(
 el.layout.addEventListener('change', (e) => {
   layout = (e.target as HTMLInputElement).value as Layout;
   styleChanged(true);
+});
+
+el.captionStyle.innerHTML = CAPTION_STYLES.map(
+  (s) =>
+    `<label><input type="radio" name="captionStyle" value="${s.id}" ${s.id === captionStyle ? 'checked' : ''}/><span>${s.label}</span></label>`,
+).join('');
+
+el.captionStyle.addEventListener('change', (e) => {
+  captionStyle = (e.target as HTMLInputElement).value as CaptionStyle;
+  // Land the preview just after the first line appears, so the new style plays straight away.
+  const first = cleanCaptions(captions)[0];
+  styleChanged(true, first ? Math.min(1, first.at + 0.01) : undefined);
 });
 
 let styleTimer: ReturnType<typeof setTimeout> | undefined;
@@ -866,10 +918,87 @@ function renderResults() {
   renderCode();
 }
 
+// ---------- background videos: hero loop and before/after ----------
+
+const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const heroVideo = document.querySelector<HTMLVideoElement>('.hero__bg video');
+const compareVideo = document.querySelector<HTMLVideoElement>('#compare');
+
+/** Plays a muted video, ignoring the browser refusing (the poster stays up instead). */
+function tryPlay(v: HTMLVideoElement) {
+  v.preload = 'auto';
+  v.play().catch(() => {});
+}
+
+if (calm) {
+  // Reduced motion: posters only, and the comparison can still be played by hand.
+  compareVideo?.setAttribute('controls', '');
+} else {
+  // The hero loop waits for the page to finish loading, so it never slows the first paint.
+  const startHero = () => heroVideo && landingShown && tryPlay(heroVideo);
+  if (document.readyState === 'complete') startHero();
+  else addEventListener('load', startHero, { once: true });
+  if (compareVideo) {
+    new IntersectionObserver(([e]) => (e.isIntersecting ? tryPlay(compareVideo) : compareVideo.pause()), {
+      threshold: 0.3,
+    }).observe(compareVideo);
+  }
+}
+
+// ---------- landing scroll demo ----------
+
+// The demo video only starts loading once the visitor is about a screen away from it.
+const demo = document.querySelector<HTMLElement>('#demo');
+if (demo) {
+  const io = new IntersectionObserver(
+    (entries) => {
+      if (!entries.some((e) => e.isIntersecting)) return;
+      io.disconnect();
+      const s = document.createElement('script');
+      s.textContent = runtimeSource;
+      document.body.appendChild(s);
+      demo.classList.add('is-live');
+    },
+    { rootMargin: '100% 0px' },
+  );
+  io.observe(demo);
+  $('#demo-try').addEventListener('click', () => {
+    el.drop.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.choose.focus({ preventScroll: true });
+  });
+}
+
 // ---------- explainer graphic ----------
 
-for (const cells of document.querySelectorAll<HTMLElement>('.strip__cells')) {
+const STRIP_CELLS = 30;
+const stripRows = [...document.querySelectorAll<HTMLElement>('.strip__cells')].map((cells) => {
   const every = Number(cells.dataset.key);
-  cells.innerHTML = Array.from({ length: 30 }, (_, i) => `<i class="${i % every === 0 ? 'key' : ''}"></i>`).join('');
+  cells.innerHTML = Array.from({ length: STRIP_CELLS }, (_, i) => `<i class="${i % every === 0 ? 'key' : ''}"></i>`).join('');
+  return { every, cells: [...cells.children] as HTMLElement[] };
+});
+
+// A playhead runs along both strips while they're on screen. On the normal video every frame since the
+// last full picture lights up too, because the browser has to rebuild all of them to show one.
+const strips = document.querySelector<HTMLElement>('.strips');
+if (strips && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  const REST = 8; // empty ticks between sweeps
+  let step = 0;
+  let timer: ReturnType<typeof setInterval> | undefined;
+  const tick = () => {
+    for (const row of stripRows) {
+      const last = step - (step % row.every);
+      row.cells.forEach((c, i) => {
+        c.classList.toggle('on', i === step);
+        c.classList.toggle('work', i >= last && i < step);
+      });
+    }
+    step = (step + 1) % (STRIP_CELLS + REST);
+  };
+  new IntersectionObserver(([e]) => {
+    clearInterval(timer);
+    timer = e.isIntersecting ? setInterval(tick, 120) : undefined;
+  }).observe(strips);
+} else {
+  document.querySelector('.legend__live')?.setAttribute('hidden', '');
 }
 

@@ -141,6 +141,18 @@ describe('layouts and captions', () => {
   it('omits the captions block when there are none', () => {
     expect(videoEmbed(info)).not.toContain('scrollscrub__captions');
   });
+  it('writes the reveal and zoom layouts', () => {
+    expect(videoEmbed({ ...info, layout: 'reveal' })).toContain('data-layout="reveal"');
+    expect(framesEmbed({ ...info, layout: 'zoom' })).toContain('data-layout="zoom"');
+  });
+  it('adds the caption style only when it is not the default and there is text', () => {
+    const caps = [{ text: 'Hello there', at: 0.2 }];
+    expect(videoEmbed({ ...info, captions: caps })).not.toContain('data-caption-style');
+    expect(videoEmbed({ ...info, captions: caps, captionStyle: 'rise' })).not.toContain('data-caption-style');
+    expect(videoEmbed({ ...info, captions: caps, captionStyle: 'words' })).toContain('data-caption-style="words"');
+    expect(framesEmbed({ ...info, captions: caps, captionStyle: 'mask' })).toContain('data-caption-style="mask"');
+    expect(videoEmbed({ ...info, captionStyle: 'blur' })).not.toContain('data-caption-style');
+  });
   it('caps the number of captions', () => {
     const many = Array.from({ length: 10 }, (_, i) => ({ text: `c${i}`, at: i / 10 }));
     expect(cleanCaptions(many)).toHaveLength(MAX_CAPTIONS);

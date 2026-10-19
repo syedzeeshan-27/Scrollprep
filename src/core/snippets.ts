@@ -12,7 +12,8 @@ export const PATHS = {
 } as const;
 
 export type FrameExt = 'webp' | 'jpg';
-export type Layout = 'full' | 'card' | 'split';
+export type Layout = 'full' | 'card' | 'split' | 'reveal' | 'zoom';
+export type CaptionStyle = 'rise' | 'words' | 'blur' | 'mask';
 
 export interface Caption {
   text: string;
@@ -24,6 +25,15 @@ export const LAYOUTS: { id: Layout; label: string }[] = [
   { id: 'full', label: 'Full screen' },
   { id: 'card', label: 'Card grows' },
   { id: 'split', label: 'Split' },
+  { id: 'reveal', label: 'Circle reveal' },
+  { id: 'zoom', label: 'Zoom out' },
+];
+
+export const CAPTION_STYLES: { id: CaptionStyle; label: string }[] = [
+  { id: 'rise', label: 'Fade up' },
+  { id: 'words', label: 'Word by word' },
+  { id: 'blur', label: 'Blur in' },
+  { id: 'mask', label: 'Slide from mask' },
 ];
 
 export const MAX_CAPTIONS = 6;
@@ -41,6 +51,8 @@ export interface ExportInfo {
   scrollLength: number;
   layout: Layout;
   captions: Caption[];
+  /** How each line of text comes in. Fade up when left out. */
+  captionStyle?: CaptionStyle;
 }
 
 /** Drops empty captions, clamps timing to 0..1 and sorts by when they appear. */
@@ -54,8 +66,12 @@ export function cleanCaptions(captions: Caption[]): Caption[] {
 
 function sectionOpen(info: ExportInfo, extraAttrs = ''): string {
   const layout = info.layout && info.layout !== 'full' ? ` data-layout="${info.layout}"` : '';
+  const style =
+    info.captionStyle && info.captionStyle !== 'rise' && cleanCaptions(info.captions ?? []).length
+      ? ` data-caption-style="${info.captionStyle}"`
+      : '';
   const ratio = info.width > 0 && info.height > 0 ? `;--scrollscrub-ratio:${Number((info.width / info.height).toFixed(4))}` : '';
-  return `<section class="scrollscrub" data-scrollscrub${layout}${extraAttrs} style="--scrollscrub-length:${info.scrollLength * 100}vh${ratio}">`;
+  return `<section class="scrollscrub" data-scrollscrub${layout}${style}${extraAttrs} style="--scrollscrub-length:${info.scrollLength * 100}vh${ratio}">`;
 }
 
 function captionLines(info: ExportInfo): string[] {
@@ -211,7 +227,9 @@ export function readme(info: ExportInfo, ffmpegCommands: string[]): string {
   parts.push('- Every video frame is a keyframe, so jumping to any point is instant.');
   parts.push('- The style attribute on the section sets how long the effect lasts (300vh = 3 screens).');
   parts.push('- data-layout="card" grows the video from a card to full screen. data-layout="split" puts text beside it.');
+  parts.push('  data-layout="reveal" opens the video out of a circle. data-layout="zoom" starts close and pulls back.');
   parts.push('- Each caption shows from its data-at (0 = start, 1 = end) until the next one. Edit the text freely.');
+  parts.push('- data-caption-style on the section changes how text comes in: words, blur or mask (fade up if left out).');
   parts.push('- Visitors who ask their device for reduced motion see the poster instead.');
   parts.push('- Serve the files from your own site. Videos on other domains need CORS headers.');
   if (ffmpegCommands.length) {

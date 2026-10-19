@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marea | ScrollPrep example</title>
+<meta name="description" content="Example beach club page: a top-down drone shot of the shoreline pulls back as you scroll, with text blurring into focus. Made with ScrollPrep.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #f6efe4; --fg: #0f3b3c; --muted: #6c7b74; --sea: #1f8f86; }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); color: var(--fg); font-family: "DM Sans", system-ui, sans-serif; }
+  body { margin: 0; }
+  a { color: inherit; text-decoration: none; }
+  .serif { font-family: "DM Serif Display", Georgia, serif; font-weight: 400; }
+  .nav { display: flex; align-items: center; justify-content: space-between; padding: 22px 5vw; font-size: 14px; }
+  .nav .logo { font-size: 26px; }
+  .nav nav { display: flex; gap: 28px; color: var(--muted); }
+  .nav .book { padding: 10px 20px; border-radius: 99px; background: var(--fg); color: var(--bg); font-weight: 700; font-size: 13px; }
+  @media (max-width: 700px) { .nav nav { display: none; } }
+
+  .hero { text-align: center; padding: 14vh 6vw 9vh; }
+  .hero .tag { color: var(--sea); font-size: 13px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; margin: 0 0 22px; }
+  .hero h1 { margin: 0 auto; font-size: clamp(50px, 8vw, 124px); line-height: .95; letter-spacing: -.02em; max-width: 10em; }
+  .hero h1 em { color: var(--sea); }
+  .hero p { color: var(--muted); font-size: 18px; line-height: 1.6; margin: 26px auto 0; max-width: 28em; }
+
+  /* Zoom out: from the waterline up to the whole bay, while the text comes into focus. */
+  .shore .scrollscrub__captions { background: linear-gradient(rgba(8,40,40,0), rgba(8,40,40,.6)); }
+  .shore .scrollscrub__caption { font-family: "DM Serif Display", Georgia, serif; font-weight: 400; letter-spacing: -.01em;
+    font-size: clamp(32px, 5vw, 72px); max-width: 11em; }
+  .shore .scrollscrub__caption small { display: block; font-family: "DM Sans", system-ui, sans-serif; font-size: 17px; font-weight: 500;
+    letter-spacing: 0; opacity: .9; margin-top: 12px; }
+
+  .days { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 24px; max-width: 1200px; margin: 0 auto; padding: 14vh 5vw; }
+  .days div { background: #fffaf2; border-radius: 22px; padding: 32px; box-shadow: 0 1px 0 rgba(15,59,60,.06); }
+  .days b { color: var(--sea); font-size: 13px; letter-spacing: .12em; text-transform: uppercase; }
+  .days h3 { font-size: 30px; margin: 10px 0 8px; }
+  .days p { color: var(--muted); margin: 0; line-height: 1.6; }
+  .foot { text-align: center; padding: 4vh 6vw 10vh; color: var(--muted); font-size: 13px; }
+  .foot a { text-decoration: underline; }
+</style>
+</head>
+<body>
+<header class="nav">
+  <a class="logo serif" href="#">Marea</a>
+  <nav><a href="#">Loungers</a><a href="#">Kitchen</a><a href="#">Getting here</a></nav>
+  <a class="book" href="#">Book a day bed</a>
+</header>
+
+<section class="hero">
+  <p class="tag">Beach club · open May to October</p>
+  <h1 class="serif">Where the sand meets <em>slow</em>.</h1>
+  <p>A quiet stretch of white sand, warm shallow water and lunch brought to your lounger. Scroll up and take it all in.</p>
+</section>
+
+<section class="scrollscrub shore" data-scrollscrub data-layout="zoom" data-caption-style="blur" style="--scrollscrub-length:340vh;--scrollscrub-ratio:1.7778">
+  <div class="scrollscrub__stage">
+    <div class="scrollscrub__frame">
+      <video class="scrollscrub__media" muted playsinline preload="auto" poster="scrollprep/poster.jpg"
+             data-src-mobile="scrollprep/video-mobile.mp4" data-poster-mobile="scrollprep/poster-mobile.jpg">
+        <source src="scrollprep/video.mp4" type="video/mp4">
+      </video>
+    </div>
+    <div class="scrollscrub__captions">
+      <div class="scrollscrub__caption" data-at="0.12">Water you can see through.<small>Knee-deep for the first fifty metres.</small></div>
+      <div class="scrollscrub__caption" data-at="0.5">Two kilometres of sand.<small>And only forty day beds on it.</small></div>
+    </div>
+  </div>
+</section>
+
+<section class="days">
+  <div><b>Morning</b><h3 class="serif">First swim</h3><p>Calm water before the breeze picks up, coffee waiting on the deck.</p></div>
+  <div><b>Midday</b><h3 class="serif">Long lunch</h3><p>Grilled fish, cold wine and a lounger in the shade.</p></div>
+  <div><b>Evening</b><h3 class="serif">Last light</h3><p>Sunset over the bay, then the kitchen stays open late.</p></div>
+</section>
+
+<p class="foot">Marea is a made-up beach club for this demo. Scroll video made with <a href="/">ScrollPrep</a>. Footage by sayari bechir on Pexels.</p>
+<script src="scrollprep/scrollscrub.js" defer></script>
+</body>
+</html>
