@@ -200,8 +200,8 @@ export async function runLoop(
       onState({ label: st.label, step: i + 1, steps: steps.length, overall: (done + st.weight * Math.min(1, f)) / total });
     report(0);
     await st.run(report);
-    done += st.weight;
     report(1);
+    done += st.weight;
   }
 
   const mp4 = files.find((f) => f.path === LOOP_PATHS.mp4);

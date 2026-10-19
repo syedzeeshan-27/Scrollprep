@@ -205,8 +205,8 @@ export async function runPipeline(
       onState({ label: st.label, step: i + 1, steps: steps.length, overall: (done + st.weight * Math.min(1, f)) / total });
     report(0);
     await st.run(report, signal);
-    done += st.weight;
     report(1);
+    done += st.weight;
   }
 
   const info: ExportInfo = {
