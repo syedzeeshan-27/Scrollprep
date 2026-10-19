@@ -1418,8 +1418,13 @@ body {
 /* ---------- small screens ---------- */
 
 @media (max-width: 720px) {
-  .topbar__nav a {
+  /* Keep the links; the "nothing is uploaded" pill is the one that doesn't fit. */
+  .topbar__nav .pill {
     display: none;
+  }
+  .topbar__nav {
+    gap: 18px;
+    font-size: 15px;
   }
   .hero {
     padding-top: 24px;
