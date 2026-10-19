@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import runtimeSource from '../src/runtime/scrollscrub.js?raw';
 import {
   clipRange,
   defaultFrameCount,
@@ -11,10 +12,12 @@ import {
 import { BUDGETS, inputWarnings, rateSize } from '../src/core/budget';
 import {
   cleanCaptions,
+  defaultHeadline,
   demoPage,
   escapeHtml,
   framesEmbed,
   MAX_CAPTIONS,
+  MAX_HEADLINE,
   readme,
   videoEmbed,
   type ExportInfo,
@@ -156,6 +159,83 @@ describe('layouts and captions', () => {
   it('caps the number of captions', () => {
     const many = Array.from({ length: 10 }, (_, i) => ({ text: `c${i}`, at: i / 10 }));
     expect(cleanCaptions(many)).toHaveLength(MAX_CAPTIONS);
+  });
+  it('writes the letterbox layout and the typewriter style', () => {
+    const caps = [{ text: 'Hello there', at: 0.2 }];
+    expect(framesEmbed({ ...info, layout: 'letterbox' })).toContain('data-layout="letterbox"');
+    expect(videoEmbed({ ...info, captions: caps, captionStyle: 'type' })).toContain('data-caption-style="type"');
+  });
+  it('writes the knockout word after the frame, defaulting to the first word of the title', () => {
+    const html = videoEmbed({ ...info, layout: 'knockout', headline: ' Air <max> ' });
+    expect(html).toContain('data-layout="knockout"');
+    expect(html).toMatch(/<\/div>\s*<div class="scrollscrub__knockout" aria-hidden="true">Air &lt;max&gt;<\/div>/);
+    expect(framesEmbed({ ...info, layout: 'knockout' })).toContain('aria-hidden="true">Shoe</div>');
+    expect(videoEmbed({ ...info, layout: 'card', headline: 'Air' })).not.toContain('scrollscrub__knockout');
+    expect(defaultHeadline('my-coffee_pour v2.mp4')).toBe('my');
+    expect(defaultHeadline('   ')).toBe('Scroll');
+    expect(defaultHeadline('Supercalifragilistic words')).toHaveLength(MAX_HEADLINE);
+  });
+  it('adds data-glow only when asked', () => {
+    expect(videoEmbed({ ...info, glow: true })).toContain('data-scrollscrub data-glow ');
+    expect(framesEmbed({ ...info, layout: 'card', glow: true })).toContain('data-layout="card" data-glow ');
+    expect(videoEmbed({ ...info, glow: false })).not.toContain('data-glow');
+  });
+  it('writes data-hold only for lines that hold the frame', () => {
+    const html = videoEmbed({
+      ...info,
+      captions: [
+        { text: 'Held', at: 0.2, hold: 0.1 },
+        { text: 'Free', at: 0.5, hold: 0 },
+        { text: 'Plain', at: 0.8 },
+      ],
+    });
+    expect(html).toContain('data-at="0.2" data-hold="0.1">Held');
+    expect(html).toContain('data-at="0.5">Free');
+    expect(html).toContain('data-at="0.8">Plain');
+  });
+  it('trims a hold that would run into the next line, past the end or over the cap', () => {
+    const caps = cleanCaptions([
+      { text: 'A', at: 0.3, hold: 0.2 },
+      { text: 'B', at: 0.4, hold: 0.9 },
+      { text: 'C', at: 0.95, hold: 0.2 },
+      { text: 'D', at: 0.5, hold: -1 },
+    ]);
+    expect(caps.map((c) => c.hold)).toEqual([0.1, 0.1, undefined, 0.05]);
+  });
+});
+
+describe('runtime hold map', () => {
+  // The runtime only runs with a window; hand it a bare one and a document that never fires load.
+  const win: { ScrollScrub?: { holdMap: (items: { at: number; hold: number }[]) => (p: number) => number } } = {};
+  new Function('window', 'document', runtimeSource)(win, { readyState: 'loading', addEventListener() {} });
+  const holdMap = win.ScrollScrub!.holdMap;
+
+  it('is the identity with no holds', () => {
+    const v = holdMap([{ at: 0.3, hold: 0 }]);
+    expect(v(0)).toBe(0);
+    expect(v(0.37)).toBe(0.37);
+    expect(v(1)).toBe(1);
+  });
+  it('freezes the video across a hold and still ends at the end', () => {
+    const v = holdMap([{ at: 0.2, hold: 0.1 }]);
+    expect(v(0)).toBe(0);
+    expect(v(0.2)).toBeCloseTo(0.2 / 0.9, 6);
+    expect(v(0.25)).toBeCloseTo(v(0.2), 6);
+    expect(v(0.3)).toBeCloseTo(v(0.2), 6);
+    expect(v(0.65)).toBeCloseTo(0.55 / 0.9, 6);
+    expect(v(1)).toBe(1);
+    let last = -1;
+    for (let p = 0; p <= 1.0001; p += 0.01) {
+      expect(v(p)).toBeGreaterThanOrEqual(last);
+      last = v(p);
+    }
+  });
+  it('stacks several holds', () => {
+    const v = holdMap([{ at: 0.1, hold: 0.1 }, { at: 0.6, hold: 0.2 }]);
+    expect(v(0.15)).toBeCloseTo(v(0.1), 6);
+    expect(v(0.7)).toBeCloseTo(v(0.6), 6);
+    expect(v(0.8)).toBeCloseTo(v(0.6), 6);
+    expect(v(1)).toBe(1);
   });
 });
 

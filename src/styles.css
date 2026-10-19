@@ -608,6 +608,38 @@ input[type='number'] {
   padding: 4px 14px 0;
 }
 
+/* extra controls under the effect picker: the knockout word and the glow toggle */
+.effect-extras {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.headline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.headline input {
+  flex: 1;
+  max-width: 220px;
+  text-transform: uppercase;
+}
+
+.check--inline {
+  padding: 9px 12px;
+  font-size: 13px;
+}
+
+.check--inline b {
+  display: inline;
+  font-size: 14px;
+  margin-right: 6px;
+}
+
 /* mode switch */
 
 .mode {
@@ -959,6 +991,16 @@ input[type='number'] {
   pointer-events: none;
 }
 
+/* How long a line holds the video frame, along the bottom of the strip. */
+.tl__hold {
+  position: absolute;
+  height: 7px;
+  border-radius: 0 4px 4px 0;
+  background: #c4b5fd;
+  box-shadow: 0 0 0 1px #0a0a0e;
+  pointer-events: none;
+}
+
 .tl__strip {
   position: relative;
   height: 56px;
@@ -1018,7 +1060,7 @@ input[type='number'] {
 
 .captions li {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
   align-items: center;
   gap: 12px;
 }
@@ -1421,7 +1463,10 @@ body {
     padding: 16px;
   }
   .captions li {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: auto auto 1fr;
+  }
+  .captions li .cap-del {
+    justify-self: end;
   }
   .captions li .cap-text {
     grid-column: 1 / -1;

@@ -12,13 +12,15 @@ export const PATHS = {
 } as const;
 
 export type FrameExt = 'webp' | 'jpg';
-export type Layout = 'full' | 'card' | 'split' | 'reveal' | 'zoom';
-export type CaptionStyle = 'rise' | 'words' | 'blur' | 'mask';
+export type Layout = 'full' | 'card' | 'split' | 'reveal' | 'zoom' | 'letterbox' | 'knockout';
+export type CaptionStyle = 'rise' | 'words' | 'blur' | 'mask' | 'type';
 
 export interface Caption {
   text: string;
   /** When it appears, 0 to 1 through the effect. */
   at: number;
+  /** How long the video freezes on its frame while this line reads, as a share of the scroll (0 to 0.5). */
+  hold?: number;
 }
 
 export const LAYOUTS: { id: Layout; label: string }[] = [
@@ -27,6 +29,8 @@ export const LAYOUTS: { id: Layout; label: string }[] = [
   { id: 'split', label: 'Split' },
   { id: 'reveal', label: 'Circle reveal' },
   { id: 'zoom', label: 'Zoom out' },
+  { id: 'letterbox', label: 'Letterbox' },
+  { id: 'knockout', label: 'Headline knockout' },
 ];
 
 export const CAPTION_STYLES: { id: CaptionStyle; label: string }[] = [
@@ -34,9 +38,23 @@ export const CAPTION_STYLES: { id: CaptionStyle; label: string }[] = [
   { id: 'words', label: 'Word by word' },
   { id: 'blur', label: 'Blur in' },
   { id: 'mask', label: 'Slide from mask' },
+  { id: 'type', label: 'Typewriter' },
 ];
 
 export const MAX_CAPTIONS = 6;
+export const MAX_HOLD = 0.5;
+export const MAX_HEADLINE = 16;
+
+/** The word the knockout layout cuts the video through: the first word of the title, or "Scroll". */
+export function defaultHeadline(title: string): string {
+  const word = title
+    .replace(/[_-]+/g, ' ')
+    .trim()
+    .split(/\s+/)[0]
+    .replace(/[^\p{L}\p{N}]/gu, '')
+    .slice(0, MAX_HEADLINE);
+  return word || 'Scroll';
+}
 
 export interface ExportInfo {
   title: string;
@@ -53,15 +71,29 @@ export interface ExportInfo {
   captions: Caption[];
   /** How each line of text comes in. Fade up when left out. */
   captionStyle?: CaptionStyle;
+  /** The word the knockout layout shows the video through. */
+  headline?: string;
+  /** The stage around the video glows in the colour of the current frame. */
+  glow?: boolean;
 }
 
-/** Drops empty captions, clamps timing to 0..1 and sorts by when they appear. */
+const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, Number.isFinite(n) ? n : 0));
+
+/**
+ * Drops empty captions, clamps timing to 0..1 and sorts by when they appear. A hold is trimmed so
+ * it never runs into the next line or past the end, and dropped when it is zero.
+ */
 export function cleanCaptions(captions: Caption[]): Caption[] {
-  return captions
-    .map((c) => ({ text: c.text.trim(), at: Math.min(1, Math.max(0, Number.isFinite(c.at) ? c.at : 0)) }))
+  const caps = captions
+    .map((c) => ({ text: c.text.trim(), at: clamp(c.at, 0, 1), hold: clamp(c.hold ?? 0, 0, MAX_HOLD) }))
     .filter((c) => c.text)
     .slice(0, MAX_CAPTIONS)
     .sort((a, b) => a.at - b.at);
+  return caps.map((c, i) => {
+    const room = Math.max(0, (i + 1 < caps.length ? caps[i + 1].at : 1) - c.at);
+    const hold = Math.round(Math.min(c.hold, room) * 1000) / 1000;
+    return hold > 0 ? { text: c.text, at: c.at, hold } : { text: c.text, at: c.at };
+  });
 }
 
 function sectionOpen(info: ExportInfo, extraAttrs = ''): string {
@@ -70,8 +102,16 @@ function sectionOpen(info: ExportInfo, extraAttrs = ''): string {
     info.captionStyle && info.captionStyle !== 'rise' && cleanCaptions(info.captions ?? []).length
       ? ` data-caption-style="${info.captionStyle}"`
       : '';
+  const glow = info.glow ? ' data-glow' : '';
   const ratio = info.width > 0 && info.height > 0 ? `;--scrollscrub-ratio:${Number((info.width / info.height).toFixed(4))}` : '';
-  return `<section class="scrollscrub" data-scrollscrub${layout}${style}${extraAttrs} style="--scrollscrub-length:${info.scrollLength * 100}vh${ratio}">`;
+  return `<section class="scrollscrub" data-scrollscrub${layout}${style}${glow}${extraAttrs} style="--scrollscrub-length:${info.scrollLength * 100}vh${ratio}">`;
+}
+
+/** The word for the knockout layout, placed in the stage after the frame. */
+function knockoutLines(info: ExportInfo): string[] {
+  if (info.layout !== 'knockout') return [];
+  const word = (info.headline ?? '').trim().slice(0, MAX_HEADLINE) || defaultHeadline(info.title);
+  return [`    <div class="scrollscrub__knockout" aria-hidden="true">${escapeHtml(word)}</div>`];
 }
 
 function captionLines(info: ExportInfo): string[] {
@@ -79,7 +119,10 @@ function captionLines(info: ExportInfo): string[] {
   if (!caps.length) return [];
   return [
     `    <div class="scrollscrub__captions">`,
-    ...caps.map((c) => `      <div class="scrollscrub__caption" data-at="${Number(c.at.toFixed(3))}">${escapeHtml(c.text)}</div>`),
+    ...caps.map(
+      (c) =>
+        `      <div class="scrollscrub__caption" data-at="${Number(c.at.toFixed(3))}"${c.hold ? ` data-hold="${c.hold}"` : ''}>${escapeHtml(c.text)}</div>`,
+    ),
     `    </div>`,
   ];
 }
@@ -120,6 +163,7 @@ export function videoEmbed(info: ExportInfo, resolve: Resolve = same): string {
   if (!v.mp4 && !v.webm && v.mobile) lines.push(`        <source src="${attr(resolve(PATHS.mobile))}" type="video/mp4">`);
   lines.push(`      </video>`);
   lines.push(`    </div>`);
+  lines.push(...knockoutLines(info));
   lines.push(...captionLines(info));
   lines.push(`  </div>`);
   lines.push(`</section>`);
@@ -141,6 +185,7 @@ export function framesEmbed(info: ExportInfo, frameUrls?: string[]): string {
     `    <div class="scrollscrub__frame">`,
     `      <canvas class="scrollscrub__media" aria-label="${attr(info.title)}"></canvas>`,
     `    </div>`,
+    ...knockoutLines(info),
     ...captionLines(info),
     `  </div>`,
     `</section>`,
@@ -228,8 +273,15 @@ export function readme(info: ExportInfo, ffmpegCommands: string[]): string {
   parts.push('- The style attribute on the section sets how long the effect lasts (300vh = 3 screens).');
   parts.push('- data-layout="card" grows the video from a card to full screen. data-layout="split" puts text beside it.');
   parts.push('  data-layout="reveal" opens the video out of a circle. data-layout="zoom" starts close and pulls back.');
+  parts.push('  data-layout="letterbox" opens cinematic bars. data-layout="knockout" plays the video through the');
+  parts.push('  word in the scrollscrub__knockout div, which grows until only the video is left. Change the word freely.');
+  parts.push('- data-glow on the section makes the page around the video glow in the colour of the current frame.');
+  parts.push('  It shows with the layouts that leave page around the video (card, split, circle reveal).');
   parts.push('- Each caption shows from its data-at (0 = start, 1 = end) until the next one. Edit the text freely.');
-  parts.push('- data-caption-style on the section changes how text comes in: words, blur or mask (fade up if left out).');
+  parts.push('- data-hold on a caption freezes the video on its frame for that share of the scroll (0.1 = 10%)');
+  parts.push('  while the line reads. The video still reaches its end at the end of the section.');
+  parts.push('- data-caption-style on the section changes how text comes in: words, blur, mask or type (letter by');
+  parts.push('  letter). Fade up if left out.');
   parts.push('- Visitors who ask their device for reduced motion see the poster instead.');
   parts.push('- Serve the files from your own site. Videos on other domains need CORS headers.');
   if (ffmpegCommands.length) {

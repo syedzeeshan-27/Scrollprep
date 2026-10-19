@@ -16,12 +16,14 @@ import {
 import {
   CAPTION_STYLES,
   cleanCaptions,
+  defaultHeadline,
   demoPage,
   escapeHtml,
   framesEmbed,
   hasVideo,
   LAYOUTS,
   MAX_CAPTIONS,
+  MAX_HOLD,
   PATHS,
   scriptTag,
   videoEmbed,
@@ -103,6 +105,9 @@ const el = {
   code: $('#code'),
   copy: $<HTMLButtonElement>('#copy'),
   layout: $('#layout'),
+  headlineRow: $('#headline-row'),
+  headline: $<HTMLInputElement>('#headline'),
+  glow: $<HTMLInputElement>('#glow'),
   captionStyle: $('#caption-style'),
   captions: $('#captions'),
   addCaption: $<HTMLButtonElement>('#add-caption'),
@@ -136,12 +141,15 @@ let previewMode: 'after' | 'phone' | 'before' | 'frames' = 'after';
 let codeTab = 'embed';
 let layout: Layout = 'full';
 let captionStyle: CaptionStyle = 'rise';
+/** The word for the knockout effect. Empty means the default from the title. */
+let headline = '';
+let glow = false;
 /** What the phone crop centres on, picked by clicking the video. */
 let focus: Focus = { x: 0.5, y: 0.5 };
 // Example lines so the effect is visible straight away. Easy to edit or remove.
 const captions: Caption[] = [
-  { text: 'Built to last.', at: 0.1 },
-  { text: 'Every detail, considered.', at: 0.55 },
+  { text: 'Built to last.', at: 0.1, hold: 0.1 },
+  { text: 'Every detail, considered.', at: 0.55, hold: 0.1 },
 ];
 
 // ---------- settings form ----------
@@ -551,6 +559,8 @@ function currentInfo(): ExportInfo {
     layout,
     captions: cleanCaptions(captions),
     captionStyle,
+    headline,
+    glow,
   };
 }
 
@@ -562,6 +572,23 @@ el.layout.innerHTML = LAYOUTS.map(
 
 el.layout.addEventListener('change', (e) => {
   layout = (e.target as HTMLInputElement).value as Layout;
+  const knockout = layout === 'knockout';
+  show(el.headlineRow, knockout);
+  if (knockout && !headline && result) {
+    headline = defaultHeadline(result.info.title);
+    el.headline.value = headline;
+  }
+  // The knockout is all about the first stretch, so land the preview a little way in.
+  styleChanged(true, knockout ? 0.12 : undefined);
+});
+
+el.headline.addEventListener('input', () => {
+  headline = el.headline.value;
+  styleChanged(false, 0.12);
+});
+
+el.glow.addEventListener('change', () => {
+  glow = el.glow.checked;
   styleChanged(true);
 });
 
@@ -672,6 +699,7 @@ function renderCaptions() {
       (c, i) => `<li data-i="${i}">
         <input type="text" class="cap-text" maxlength="80" value="${escapeHtml(c.text)}" placeholder="Say something about it" aria-label="Text ${i + 1}" />
         <label class="cap-at">at <input type="number" min="0" max="100" step="5" value="${Math.round(c.at * 100)}" aria-label="When text ${i + 1} appears, in percent" /> %</label>
+        <label class="cap-at cap-hold" title="Freeze the video on its frame for this much of the scroll while the line reads">hold <input type="number" min="0" max="${MAX_HOLD * 100}" step="5" value="${Math.round((c.hold ?? 0) * 100)}" aria-label="How long the video holds its frame for text ${i + 1}, in percent of the scroll" /> %</label>
         <button type="button" class="link cap-del" aria-label="Remove text ${i + 1}">Remove</button>
       </li>`,
     )
@@ -685,6 +713,7 @@ el.captions.addEventListener('input', (e) => {
   const i = Number(input.closest('li')?.dataset.i);
   if (!captions[i]) return;
   if (input.classList.contains('cap-text')) captions[i].text = input.value;
+  else if (input.closest('.cap-hold')) captions[i].hold = Math.min(MAX_HOLD * 100, Math.max(0, Number(input.value) || 0)) / 100;
   else captions[i].at = Math.min(100, Math.max(0, Number(input.value) || 0)) / 100;
   timeline.setCaptions(captions);
   styleChanged(false);

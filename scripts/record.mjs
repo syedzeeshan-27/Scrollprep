@@ -143,20 +143,24 @@ async function recordLoop(context, id, { width = 640, seconds = 6 } = {}) {
 }
 
 /**
- * All five effects side by side, driven by one scroll. Each tile is a small page with the coast clip,
+ * The effects side by side, driven by one scroll. Each tile is a small page with the coast clip,
  * rendered at 800x500 and shown at half size, so the split layout still gets its wide-screen look.
  */
 const EFFECT_TILES = [
   ['full', 'rise', 'Full screen'],
-  ['card', 'rise', 'Card grows'],
+  ['card', 'rise', 'Card grows + glow', ' data-glow'],
   ['split', 'rise', 'Split'],
   ['reveal', 'words', 'Circle reveal'],
   ['zoom', 'blur', 'Zoom out'],
+  ['letterbox', 'rise', 'Letterbox'],
+  ['knockout', 'rise', 'Headline knockout'],
   ['full', 'mask', 'Text: slide from mask'],
+  ['full', 'type', 'Text: typewriter'],
 ];
 
-function tilePage(layout, style, label) {
-  const attrs = `${layout === 'full' ? '' : ` data-layout="${layout}"`}${style === 'rise' ? '' : ` data-caption-style="${style}"`}`;
+function tilePage(layout, style, label, extra = '') {
+  const attrs = `${layout === 'full' ? '' : ` data-layout="${layout}"`}${style === 'rise' ? '' : ` data-caption-style="${style}"`}${extra}`;
+  const word = layout === 'knockout' ? '<div class="scrollscrub__knockout" aria-hidden="true">Coast</div>' : '';
   return `<!doctype html><html><head><meta charset="utf-8"><style>
     html{background:#09090c;color:#ededf2;font-family:system-ui,sans-serif}body{margin:0}
     .scrollscrub__caption{font-size:44px}
@@ -164,7 +168,7 @@ function tilePage(layout, style, label) {
   <section class="scrollscrub" data-scrollscrub${attrs} style="--scrollscrub-length:300vh;--scrollscrub-ratio:1.7778">
     <div class="scrollscrub__stage"><div class="scrollscrub__frame">
       <video class="scrollscrub__media" muted playsinline preload="auto" src="/examples/coast/scrollprep/video.mp4"></video>
-    </div><div class="scrollscrub__captions"><div class="scrollscrub__caption" data-at="0.3">${label}</div></div></div>
+    </div>${word}<div class="scrollscrub__captions"><div class="scrollscrub__caption" data-at="0.3">${label}</div></div></div>
   </section><div style="height:40px"></div>
   <script src="/examples/coast/scrollprep/scrollscrub.js"></script></body></html>`;
 }
@@ -173,7 +177,7 @@ async function recordEffects(context) {
   console.log('== effects');
   const page = await context.newPage();
   await page.goto(base);
-  const tiles = EFFECT_TILES.map(([l, s, label]) => ({ html: tilePage(l, s, label), label: label.replace('Text: ', 'Text · ') }));
+  const tiles = EFFECT_TILES.map(([l, s, label, extra]) => ({ html: tilePage(l, s, label, extra), label: label.replace('Text: ', 'Text · ') }));
   await page.evaluate((tiles) => {
     document.open();
     document.write(`<!doctype html><html><head><style>
@@ -206,6 +210,8 @@ async function recordEffects(context) {
     }))));
   };
   const height = await page.evaluate(() => Math.ceil(document.querySelector('.grid').getBoundingClientRect().bottom));
+  // The grid is taller than the default viewport, so grow the window to fit every row.
+  await page.setViewportSize({ width: 1280, height });
   const reel = new Reel('effects', page, { x: 0, y: 0, width: 1280, height });
   await scrollAll(0);
   await reel.shot(0.8);
@@ -361,6 +367,8 @@ const jobs = {
   watch: () => recordScroll(desktop, 'watch', { through: 76 }),
   // Rippling water is hard on GIF compression. Keep all the colours (fewer looks muddy), go a bit narrower.
   beach: () => recordScroll(desktop, 'beach', { width: 560, through: 72 }),
+  swell: () => recordScroll(desktop, 'swell', { through: 80 }),
+  aurora: () => recordScroll(desktop, 'aurora', { through: 76 }),
   effects: () => recordEffects(desktop),
   landing: () => recordLanding(desktop),
   'how-it-works': () => recordStrip(desktop),

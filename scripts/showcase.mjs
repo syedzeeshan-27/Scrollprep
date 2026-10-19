@@ -67,6 +67,22 @@ export const EXAMPLES = [
     setup: [pick('fps', 24)],
   },
   {
+    // Headline knockout: a surfer on a turquoise wave shows through the letters of the brand.
+    id: 'swell',
+    clip: 'https://videos.pexels.com/video-files/32889385/14016974_1920_1080_30fps.mp4',
+    folder: 'scrollprep',
+    trim: [7, 16],
+    setup: [pick('fps', 24)],
+  },
+  {
+    // Ambient glow: the aurora shifts from purple to green, and the page glows with it.
+    id: 'aurora',
+    clip: 'https://videos.pexels.com/video-files/28492331/12397892_1920_1080_24fps.mp4',
+    folder: 'scrollprep',
+    trim: [3, 15],
+    setup: [pick('fps', 24)],
+  },
+  {
     // The ScrollPrep homepage's own header video, made with the Background loop mode.
     id: 'hero',
     clip: 'https://videos.pexels.com/video-files/38357188/16288226_1920_1080_30fps.mp4',

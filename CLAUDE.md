@@ -20,4 +20,17 @@ In-browser tool that turns a video into scroll-scrub-ready files. Plan: `docs/pl
 - 2026-10-19: The keyframe strip's playhead cell never lit up because its 0.2 s colour fade was longer than
   the 120 ms tick. Flashing states that change faster than their transition need `transition: none`.
 - 2026-10-19: `ffmpeg ... -vsync vfr` failed: this ffmpeg (8.x) removed `-vsync`. Use `-fps_mode vfr`.
+- 2026-10-19: A test imported `node:fs` to read the runtime source and `tsc` failed (no node types, and
+  we don't want them). Import it as text with `?raw` instead, as `main.ts` already does.
+- 2026-10-19: A `::after` reset for the typewriter cursor in the split and static layouts did nothing because
+  it had lower specificity than the `.is-active::after` rule that creates it. Reset rules must match or beat
+  the specificity of the rule they undo (here, include `.is-active`).
+- 2026-10-19: Adding a third row to the effects tile grid cut it off in the GIF: the screenshot clip grew with the
+  grid but the browser viewport stayed at 800px. `record.mjs` now sets the viewport to the grid height first.
+- 2026-10-19: Colour in and Highlight effects were built and then dropped: Zeeshan wants scroll-experience effects
+  (how the video lives on the page), not picture or text decoration, and nothing that turns the app into a video
+  editor. Check new effect ideas against that before building.
+- 2026-10-19: The glow sampler eased a colour towards its target and only wrote the CSS variable when something
+  moved, so the first sample (current = target) never got written and the preview showed no glow. Anything that
+  eases towards a value must also write the first value.
 - 2026-10-16: Scripts that clear `.showcase/*` failed with EBUSY three times because the shell's working directory was left inside that folder (Windows locks it). Never `cd` into generated output folders; read them with absolute paths.

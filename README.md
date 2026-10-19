@@ -46,7 +46,7 @@ the files and a tiny player.
 
 ## Examples
 
-Six free clips from [Pexels](https://www.pexels.com), each run through ScrollPrep and dropped into a
+Eight free clips from [Pexels](https://www.pexels.com), each run through ScrollPrep and dropped into a
 small made-up website. The GIFs are recordings of those real pages being scrolled. You can
 scroll them yourself on the [live examples page](https://scrollprep.vercel.app/examples/). The page source is
 in [`public/examples`](public/examples).
@@ -98,6 +98,22 @@ in [`public/examples`](public/examples).
       A drone looks straight down at the shoreline, turning as you scroll, and pulls back while the
       text comes into focus. 9 seconds from a 1440p clip, 7.1 MB.</p>
       <sub><a href="https://scrollprep.vercel.app/examples/beach/">Open it live</a> · <a href="public/examples/beach/index.html">Page source</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/media/swell.gif" alt="A surfer rides a turquoise wave through the letters of the word Swell, which grow until only the sea is left">
+      <p><b>Surf brand</b> · Headline knockout effect<br>
+      The sea plays through the letters of the brand name. As you scroll the word grows past the
+      edges of the screen and the wave takes over. 9 seconds of a 1080p drone clip, 7.0 MB.</p>
+      <sub><a href="https://scrollprep.vercel.app/examples/swell/">Open it live</a> · <a href="public/examples/swell/index.html">Page source</a></sub>
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/media/aurora.gif" alt="The northern lights drift from purple to green beside a column of text while the page glows in the same colour">
+      <p><b>Northern lights</b> · Split effect with ambient glow<br>
+      The sky sits beside the text and the page glows in whatever colour the frame is: violet at
+      first, then green as the aurora builds. 12 seconds, 8.6 MB.</p>
+      <sub><a href="https://scrollprep.vercel.app/examples/aurora/">Open it live</a> · <a href="public/examples/aurora/index.html">Page source</a></sub>
     </td>
   </tr>
 </table>
@@ -169,7 +185,7 @@ The section's height sets how long the effect lasts. `300vh` means three screens
 Pick an effect in the app, or set it by hand:
 
 <p align="center">
-  <img src="docs/media/effects.gif" width="640" alt="Six tiles scrubbing on one scroll: full screen, card grows, split, circle reveal, zoom out and the slide-from-mask text style">
+  <img src="docs/media/effects.gif" width="640" alt="Nine tiles scrubbing on one scroll: full screen, card grows with ambient glow, split, circle reveal, zoom out, letterbox, headline knockout, and the slide-from-mask and typewriter text styles">
 </p>
 
 - **Full screen** (default): the video fills the screen and scrubs.
@@ -179,9 +195,21 @@ Pick an effect in the app, or set it by hand:
   back to text over the video.
 - **Circle reveal** (`data-layout="reveal"`): the video opens out of a small circle in the middle.
 - **Zoom out** (`data-layout="zoom"`): the video starts zoomed in and pulls back to the full picture.
+- **Letterbox** (`data-layout="letterbox"`): cinematic black bars open from a thin strip to the full
+  frame.
+- **Headline knockout** (`data-layout="knockout"`): the video plays through a giant word, which grows
+  past the edges of the screen until only the video is left. The word sits in the stage as
+  `<div class="scrollscrub__knockout" aria-hidden="true">Air</div>`; the app fills it from the file
+  name and lets you change it.
 
-Text can come in four ways, set with `data-caption-style` on the section: fade up (the default),
-`words` (one word at a time), `blur` (out of a blur) or `mask` (wiping up from behind a line).
+**Ambient glow** (`data-glow` on the section) makes the page around the video glow in the colour of
+the frame on screen, so a sunset clip warms the page as it scrubs. It shows with the layouts that
+leave page around the video: card grows, split and circle reveal. The section also gets
+`--scrollscrub-glow` (an `rgb()` colour) and `--scrollscrub-glow-rgb` (`r g b`) for your own styling.
+
+Text can come in five ways, set with `data-caption-style` on the section: fade up (the default),
+`words` (one word at a time), `blur` (out of a blur), `mask` (wiping up from behind a line) or
+`type` (typed letter by letter, cursor and all).
 
 Text appears at chosen points and stays until the next line starts. In the app you place it on a
 timeline of stills from your video: drag a label (or use the arrow keys, Shift for bigger steps) and
@@ -189,10 +217,15 @@ the preview jumps to where it appears. By hand it looks like this:
 
 ```html
 <div class="scrollscrub__captions">
-  <div class="scrollscrub__caption" data-at="0.1">Small enough to forget.</div>
+  <div class="scrollscrub__caption" data-at="0.1" data-hold="0.1">Small enough to forget.</div>
   <div class="scrollscrub__caption" data-at="0.55">Ready in a second.</div>
 </div>
 ```
+
+`data-hold` freezes the video on its frame for that share of the scroll (here 10%) while the line
+reads, then the video carries on and still reaches its end at the end of the section. It is what
+makes an effect feel deliberate instead of just scrubbing. In the app it is the **hold** box next to
+each line, and the timeline shows it as a bar after the label.
 
 The section also gets `--scrollscrub-progress` and `--scrollscrub-grow` CSS variables (0 to 1), so
 you can drive your own styles from the scroll. Visitors who turn on reduced motion get the poster with

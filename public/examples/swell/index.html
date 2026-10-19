@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Swell | ScrollPrep example</title>
+<meta name="description" content="Example surf brand page: a surfer rides through the letters of the brand name, which grow until only the sea is left. Made with ScrollPrep.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #050b12; --fg: #f1f6fa; --muted: #8aa0b3; --sea: #35d6c6; }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); color: var(--fg); font-family: Sora, system-ui, sans-serif; }
+  body { margin: 0; }
+  a { color: inherit; text-decoration: none; }
+  .nav { display: flex; align-items: center; justify-content: space-between; padding: 22px 6vw; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; }
+  .nav .logo { font-weight: 800; font-size: 20px; letter-spacing: .2em; }
+  .nav nav { display: flex; gap: 32px; color: var(--muted); }
+  .nav .shop { color: var(--sea); }
+  @media (max-width: 700px) { .nav nav { display: none; } }
+
+  .hero { min-height: 78vh; display: grid; place-content: center; text-align: center; padding: 8vh 6vw; }
+  .tag { color: var(--sea); font-size: 12px; letter-spacing: .3em; text-transform: uppercase; margin: 0 0 24px; }
+  .hero h1 { margin: 0; font-size: clamp(42px, 7vw, 104px); font-weight: 800; line-height: .98; letter-spacing: -.04em; }
+  .hero p { color: var(--muted); font-size: 17px; line-height: 1.7; margin: 26px auto 0; max-width: 30em; }
+  .hero .down { display: block; margin: 40px auto 0; color: var(--muted); font-size: 12px; letter-spacing: .3em; text-transform: uppercase; }
+
+  /* Headline knockout: the sea plays through the brand name, which grows until only the sea is left. */
+  .sea .scrollscrub__knockout { font-family: Sora, system-ui, sans-serif; font-weight: 800; letter-spacing: -.06em; }
+  .sea .scrollscrub__captions { background: linear-gradient(rgba(5,11,18,0), rgba(5,11,18,.7)); }
+  .sea .scrollscrub__caption { font-weight: 800; letter-spacing: -.03em; max-width: 12em; }
+  .sea .scrollscrub__caption small { display: block; font-weight: 400; font-size: 16px; letter-spacing: 0; color: #cfe0ea; margin-top: 14px; line-height: 1.6; }
+
+  .boards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 32px; max-width: 1100px; margin: 0 auto; padding: 14vh 6vw 10vh; }
+  .boards div { padding: 28px; border: 1px solid rgba(255,255,255,.08); border-radius: 18px; background: rgba(255,255,255,.02); }
+  .boards b { display: block; font-size: 22px; margin-bottom: 8px; }
+  .boards i { display: block; color: var(--sea); font-style: normal; font-size: 12px; letter-spacing: .24em; text-transform: uppercase; margin-bottom: 14px; }
+  .boards span { color: var(--muted); font-size: 15px; line-height: 1.6; }
+  .foot { text-align: center; padding: 6vh 6vw 10vh; color: #5c6f80; font-size: 13px; border-top: 1px solid rgba(255,255,255,.06); }
+  .foot a { text-decoration: underline; }
+</style>
+</head>
+<body>
+<header class="nav">
+  <a class="logo" href="#">SWELL</a>
+  <nav><a href="#">Boards</a><a href="#">Fins</a><a href="#">Journal</a></nav>
+  <a class="shop" href="#">Shop</a>
+</header>
+
+<section class="hero">
+  <p class="tag">Hand-shaped in Bali</p>
+  <h1>Boards built for<br>the morning glass.</h1>
+  <p>Every Swell board starts as a single blank and a dawn session. Scroll to paddle out.</p>
+  <span class="down">Scroll</span>
+</section>
+
+<section class="scrollscrub sea" data-scrollscrub data-layout="knockout" style="--scrollscrub-length:420vh;--scrollscrub-ratio:1.7778" aria-label="A surfer rides a turquoise wave, seen through the letters of the word Swell">
+  <div class="scrollscrub__stage">
+    <div class="scrollscrub__frame">
+      <video class="scrollscrub__media" muted playsinline preload="auto" poster="scrollprep/poster.jpg"
+             data-src-mobile="scrollprep/video-mobile.mp4" data-poster-mobile="scrollprep/poster-mobile.jpg">
+        <source src="scrollprep/video.mp4" type="video/mp4">
+      </video>
+    </div>
+    <div class="scrollscrub__knockout" aria-hidden="true">Swell</div>
+    <div class="scrollscrub__captions">
+      <div class="scrollscrub__caption" data-at="0.48" data-hold="0.06">Shaped for the drop.<small>A pulled-in tail and a single concave that holds its line on the steep part of the wave.</small></div>
+      <div class="scrollscrub__caption" data-at="0.76">Ridden before breakfast.<small>Tested every morning on the reef it was made for.</small></div>
+    </div>
+  </div>
+</section>
+
+<section class="boards">
+  <div><i>5'10" to 6'4"</i><b>The Reef</b><span>A step-up for hollow days. Thin rails, a lot of rocker, no fuss.</span></div>
+  <div><i>6'8" to 7'6"</i><b>The Glider</b><span>Long, flat and fast for small, clean mornings.</span></div>
+  <div><i>Custom</i><b>Your blank</b><span>Tell us the break and how you surf it. We shape the rest.</span></div>
+</section>
+
+<p class="foot">Swell is a made-up brand for this demo. Scroll video made with <a href="/">ScrollPrep</a>. Footage by <a href="https://macourtmedia.com">Macourt Media</a> on Pexels.</p>
+<script src="scrollprep/scrollscrub.js" defer></script>
+</body>
+</html>

@@ -75,18 +75,21 @@ export class Timeline {
     );
     const laneCount = this.captions.length ? Math.max(...lanes) + 1 : 1;
     this.markersEl.style.height = `${laneCount * LANE_PX + 8}px`;
+    // The strip sits below the markers; a hold shows as a bar along its bottom edge.
+    const holdTop = (laneCount - 1) * LANE_PX + 38 + STRIP_PX - 8;
     this.markersEl.innerHTML = this.captions
       .map((c, i) => {
         const pct = Math.round(c.at * 100);
         const label = shortLabel(c.text);
         // The stem runs down through the strip so the exact point is visible on the stills.
         const stem = (laneCount - 1 - lanes[i]) * LANE_PX + 14 + STRIP_PX;
+        const hold = c.hold ? `<i class="tl__hold" data-i="${i}" style="left:${c.at * 100}%;width:${c.hold * 100}%;top:${holdTop}px"></i>` : '';
         return `<div class="tl__marker" data-i="${i}" style="left:${c.at * 100}%;top:${lanes[i] * LANE_PX}px;--at:${c.at}">
           <button type="button" class="tl__label" aria-label="${escapeHtml(label)}, appears at ${pct}%. Drag, or use the arrow keys to move it.">
             <span>${escapeHtml(label)}</span><b>${pct}%</b>
           </button>
           <i class="tl__stem" style="height:${stem}px"></i>
-        </div>`;
+        </div>${hold}`;
       })
       .join('');
   }
@@ -96,6 +99,8 @@ export class Timeline {
     if (!m) return;
     m.style.left = `${at * 100}%`;
     m.style.setProperty('--at', String(at));
+    const hold = this.markersEl.querySelector<HTMLElement>(`.tl__hold[data-i="${index}"]`);
+    if (hold) hold.style.left = `${at * 100}%`;
     const pct = m.querySelector('b');
     if (pct) pct.textContent = `${Math.round(at * 100)}%`;
   }

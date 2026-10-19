@@ -86,9 +86,9 @@
               </video>
             </div>
             <div class="scrollscrub__captions">
-              <div class="scrollscrub__caption" data-at="0.12">Every frame, a full picture.<small>So any point in the scroll lands cleanly.</small></div>
-              <div class="scrollscrub__caption" data-at="0.42">Forwards, backwards, fast or slow.<small>No stutter, no waiting for the video to catch up.</small></div>
-              <div class="scrollscrub__caption" data-at="0.72">From one ordinary clip.<small>Prepped in the browser, nothing uploaded.</small></div>
+              <div class="scrollscrub__caption" data-at="0.12" data-hold="0.08">Every frame, a full picture.<small>So any point in the scroll lands cleanly.</small></div>
+              <div class="scrollscrub__caption" data-at="0.42" data-hold="0.08">Forwards, backwards, fast or slow.<small>No stutter, no waiting for the video to catch up.</small></div>
+              <div class="scrollscrub__caption" data-at="0.72" data-hold="0.08">From one ordinary clip.<small>Prepped in the browser, nothing uploaded.</small></div>
             </div>
           </div>
         </section>
@@ -213,6 +213,13 @@
             <fieldset>
               <legend>Effect</legend>
               <div class="seg" id="layout" role="radiogroup" aria-label="Effect"></div>
+              <div class="effect-extras">
+                <label class="headline" id="headline-row" hidden>
+                  <span>Word</span>
+                  <input type="text" id="headline" maxlength="16" placeholder="One word" aria-label="The word the video shows through" />
+                </label>
+                <label class="check check--inline"><input type="checkbox" id="glow" /><span><b>Ambient glow</b> the page around the video takes on the colour of the frame. Shows with Card grows, Split and Circle reveal.</span></label>
+              </div>
             </fieldset>
             <fieldset>
               <legend>Length</legend>
